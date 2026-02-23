@@ -25,9 +25,39 @@ class RestaurantViewScreen extends StatefulWidget {
 
 class _RestaurantViewScreenState extends State<RestaurantViewScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  String selectedCategory = 'Burger';
+  String selectedCategory = '';
+  List<String> categories = [];
 
-  final List<String> categories = ['Burger', 'Sandwich', 'Pizza', 'Sandwich'];
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('restaurants')
+          .doc(widget.restaurantId)
+          .collection('menu')
+          .get();
+
+      Set<String> uniqueCategories = {};
+      for (var doc in snapshot.docs) {
+        String category = doc['category'] ?? '';
+        if (category.isNotEmpty) {
+          uniqueCategories.add(category);
+        }
+      }
+
+      setState(() {
+        categories = ['All', ...uniqueCategories.toList()];
+        selectedCategory = 'All';
+      });
+    } catch (e) {
+      print('Error loading categories: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -213,12 +243,13 @@ class _RestaurantViewScreenState extends State<RestaurantViewScreen> {
                     SizedBox(height: 24),
 
                     // Category Chips
-                    Container(
-                      height: 50,
-                      child: ListView.builder(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: categories.length,
+                    if (categories.isNotEmpty)
+                      Container(
+                        height: 50,
+                        child: ListView.builder(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          scrollDirection: Axis.horizontal,
+                          itemCount: categories.length,
                         itemBuilder: (context, index) {
                           final category = categories[index];
                           final isSelected = selectedCategory == category;
@@ -259,11 +290,11 @@ class _RestaurantViewScreenState extends State<RestaurantViewScreen> {
 
                     SizedBox(height: 24),
 
-                    // Category Title with Count
+                    // Category Title
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20.0),
                       child: Text(
-                        '$selectedCategory (10)',
+                        selectedCategory,
                         style: TextStyle(
                           fontFamily: 'Sen',
                           fontSize: 20,
@@ -277,12 +308,18 @@ class _RestaurantViewScreenState extends State<RestaurantViewScreen> {
 
                     // Menu Items Grid
                     StreamBuilder<QuerySnapshot>(
-                      stream: _firestore
-                          .collection('restaurants')
-                          .doc(widget.restaurantId)
-                          .collection('menu')
-                          .where('category', isEqualTo: selectedCategory)
-                          .snapshots(),
+                      stream: selectedCategory == 'All'
+                          ? _firestore
+                              .collection('restaurants')
+                              .doc(widget.restaurantId)
+                              .collection('menu')
+                              .snapshots()
+                          : _firestore
+                              .collection('restaurants')
+                              .doc(widget.restaurantId)
+                              .collection('menu')
+                              .where('category', isEqualTo: selectedCategory)
+                              .snapshots(),
                       builder: (context, snapshot) {
                         if (snapshot.hasError) {
                           return Center(child: Text('Error loading menu'));
