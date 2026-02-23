@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 Future<void> addTestRestaurants() async {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
   
   List<Map<String, dynamic>> restaurants = [
     {
@@ -35,7 +35,7 @@ Future<void> addTestRestaurants() async {
   ];
 
   for (var restaurant in restaurants) {
-    await _firestore.collection('restaurants').add(restaurant);
+    await firestore.collection('restaurants').add(restaurant);
   }
   
   print('Test restaurants added!');

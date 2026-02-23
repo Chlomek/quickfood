@@ -10,6 +10,8 @@ import '../../restaurant/screens/restauranthomescreen.dart';
 //TO DO: add Google sign in functionality and error handling for login failures
 
 class LoginScreen extends StatelessWidget {
+  const LoginScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
