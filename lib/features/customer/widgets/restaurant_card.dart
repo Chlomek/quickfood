@@ -89,7 +89,7 @@ class RestaurantCard extends StatelessWidget {
               ),
             ),
             SizedBox(height: 8),
-            // Rating and Delivery Time
+            // Rating and Prepare Time
             Row(
               children: [
                 Icon(Icons.star, color: Colors.orange, size: 20),

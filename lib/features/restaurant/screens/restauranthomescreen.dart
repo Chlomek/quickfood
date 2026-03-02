@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 class RestaurantHomeScreen extends StatelessWidget {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  const RestaurantHomeScreen({super.key});
+  RestaurantHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

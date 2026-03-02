@@ -3,6 +3,7 @@ import 'theme/app_theme.dart';
 import 'features/shared/screens/loginscreen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'features/shared/services/authWrapper.dart';
 
 
 void main() async {
@@ -21,7 +22,10 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: AppTheme.theme,
-      home: LoginScreen(),
+      home: const AuthWrapper(),
+    routes: {
+      '/login': (context) => const LoginScreen(),
+    },
     );
   }
 }

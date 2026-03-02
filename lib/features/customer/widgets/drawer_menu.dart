@@ -162,9 +162,46 @@ class DrawerMenu extends StatelessWidget {
                   iconColor: Colors.red,
                   textColor: Colors.red,
                   onTap: () async {
-                    await _auth.signOut();
-                    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-                  },
+  // 1. Ask for confirmation first
+  bool? confirmLogout = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Logout'),
+      content: const Text('Are you sure you want to log out?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Logout', style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    ),
+  );
+
+  // 2. If they confirmed, proceed with the sign-out
+  if (confirmLogout == true) {
+    try {
+      // Show a loading snackbar or overlay if needed
+      await _auth.signOut();
+      
+      // 3. Clear the navigation stack and go to Login
+      if (context.mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/login', 
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      // Handle potential errors (e.g. network issues)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Logout failed: $e")),
+      );
+    }
+  }
+},
                 ),
               ],
             ),
