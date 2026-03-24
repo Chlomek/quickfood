@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'itemdetailsscreen.dart';
+import 'package:quickfood/features/customer/widgets/cart_icon.dart';
 
 class RestaurantViewScreen extends StatefulWidget {
   final String restaurantId;
@@ -97,45 +98,7 @@ class _RestaurantViewScreenState extends State<RestaurantViewScreen> {
                     ),
                   ),
                   // Cart Icon with Badge
-                  Stack(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Color(0xFF1A1B2E),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.shopping_bag_outlined, color: Colors.white),
-                      ),
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.orange,
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: BoxConstraints(
-                            minWidth: 20,
-                            minHeight: 20,
-                          ),
-                          child: Center(
-                            child: Text(
-                              '2',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Sen',
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  const CartBadgeIcon()
                 ],
               ),
             ),

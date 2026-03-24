@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:quickfood/features/customer/widgets/cart_icon.dart';
+import 'package:quickfood/features/shared/services/cartProvider.dart';
+import 'package:provider/provider.dart';
 
 class ItemDetailsScreen extends StatefulWidget {
   final String itemId;
@@ -44,20 +47,63 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
     });
   }
 
-  void _addToCart() {
-    // TODO: Implement add to cart logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${widget.itemName} (x$quantity) added to cart!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
-    
-    // Navigate back after adding to cart
-    Future.delayed(Duration(milliseconds: 500), () {
+ void _addToCart() async {
+    // 1. Access the CartProvider
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+    try {
+      // 2. Attempt to add the item
+      await cartProvider.addToCart(
+        CartItem( // Make sure your CartItem model is imported
+          id: widget.itemId,
+          name: widget.itemName,
+          price: widget.price,
+          imageUrl: widget.imageUrl,
+          restaurantName: widget.restaurantName,
+          quantity: quantity,
+        ),
+      );
+
+      // 3. Safety check: Ensure the widget is still on screen before showing UI
+      if (!mounted) return;
+
+      // 4. Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${widget.itemName} (x$quantity) added to cart!'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      
+      // 5. Navigate back to the menu
       Navigator.pop(context);
-    });
+
+    } catch (e) {
+      // 6. Handle the "Different Restaurant" error
+      if (!mounted) return;
+      
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Start new basket?"),
+          content: Text(e.toString().replaceAll("Exception: ", "")),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx), 
+              child: const Text("Cancel")
+            ),
+            TextButton(
+              onPressed: () {
+                // You can call cartProvider.clearCart() here later!
+                Navigator.pop(ctx);
+              }, 
+              child: const Text("Clear Cart", style: TextStyle(color: Colors.red))
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -130,52 +176,7 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
                       ),
 
                       // Cart Icon
-                      Stack(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: Color(0xFF1A1B2E),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 10,
-                                  offset: Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Icon(Icons.shopping_bag_outlined, color: Colors.white),
-                          ),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              padding: EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.orange,
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: BoxConstraints(
-                                minWidth: 20,
-                                minHeight: 20,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '2',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    fontFamily: 'Sen',
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      const CartBadgeIcon()
                     ],
                   ),
                 ),

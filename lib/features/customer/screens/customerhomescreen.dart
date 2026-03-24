@@ -5,6 +5,7 @@ import '../widgets/restaurant_card.dart';
 import '../widgets/drawer_menu.dart';
 import '../widgets/category_filter_list.dart';
 import '../widgets/search_bar.dart';
+import '../widgets/cart_icon.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
   @override
@@ -19,16 +20,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   String selectedCategory = 'All';
   String searchQuery = '';
-  int cartItemCount = 0;
+  
 
-  // The expanded height of the SliverAppBar flexible space.
-  // Adjust this to match your welcome text + search bar height.
   static const double _expandedHeight = 205.0;
 
   final List<Map<String, dynamic>> categories = [
     {'name': 'All', 'icon': Icons.grid_view},
     {'name': 'Pizza', 'icon': Icons.local_pizza},
-    {'name': 'Pasta', 'icon': Icons.lunch_dining},
+    {'name': 'Sushi', 'icon': Icons.ramen_dining},
     {'name': 'Burger', 'icon': Icons.lunch_dining},
     {'name': 'Fries', 'icon': Icons.fastfood},
   ];
@@ -36,7 +35,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCartCount();
     _searchController.addListener(() {
       setState(() => searchQuery = _searchController.text.toLowerCase());
     });
@@ -47,10 +45,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadCartCount() async {
-    setState(() => cartItemCount = 2);
   }
 
   bool _filterRestaurant(Map<String, dynamic> restaurant) {
@@ -75,15 +69,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
-  void _openCart() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Cart screen coming soon!'),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 1),
-      ),
-    );
-  }
 
   void _clearSearch() {
     _searchController.clear();
@@ -141,15 +126,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               controller: _scrollController,
               physics: BouncingScrollPhysics(),
               slivers: [
-                // ── SliverAppBar handles the smooth collapse natively ──
                 SliverAppBar(
                   backgroundColor: Colors.white,
                   elevation: 0,
-                  pinned: true,         // top bar always stays visible
-                  floating: false,
+                  pinned: true,
                   expandedHeight: _expandedHeight,
-
-                  // ── Collapsed state: just the top bar row ──
                   title: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -165,7 +146,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           child: Icon(Icons.menu, color: Colors.black87, size: 20),
                         ),
                       ),
-                      // Animated title that fades in as header collapses
                       AnimatedBuilder(
                         animation: _scrollController,
                         builder: (context, child) {
@@ -185,57 +165,16 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           ),
                         ),
                       ),
-                      GestureDetector(
-                        onTap: _openCart,
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Color(0xFF1A1B2E),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 20),
-                            ),
-                            if (cartItemCount > 0)
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: Container(
-                                  padding: EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                      color: Colors.orange, shape: BoxShape.circle),
-                                  constraints: BoxConstraints(minWidth: 18, minHeight: 18),
-                                  child: Center(
-                                    child: Text(
-                                      cartItemCount.toString(),
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        fontFamily: 'Sen',
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+                      // 5. REPLACED OLD STACK WITH NEW WIDGET
+                      const CartBadgeIcon(), 
                     ],
                   ),
-                  // Remove the default leading back button
                   automaticallyImplyLeading: false,
                   titleSpacing: 20,
-
-                  // ── Expanded state: welcome text + search bar ──
                   flexibleSpace: FlexibleSpaceBar(
-                    // Disable the built-in title so our custom title above takes over
                     title: null,
                     collapseMode: CollapseMode.pin,
                     background: Padding(
-                      // Top padding leaves room for the pinned title row
                       padding: const EdgeInsets.fromLTRB(20, 70, 20, 0),
                       child: AnimatedBuilder(
                         animation: _scrollController,
@@ -280,18 +219,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     ),
                   ),
                 ),
-
-                // ── All Categories header ──
+                // ... rest of your slivers remain the same
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.only(top: 24),
                     child: _buildSectionHeader('All Categories', () {}),
                   ),
                 ),
-
                 SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-                // ── Category filter chips ──
                 SliverToBoxAdapter(
                   child: CategoryFilterList(
                     categories: categories,
@@ -300,17 +235,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         setState(() => selectedCategory = name),
                   ),
                 ),
-
                 SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-                // ── Open Restaurants header ──
                 SliverToBoxAdapter(
                   child: _buildSectionHeader('Open Restaurants', () {}),
                 ),
-
                 SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-                // ── Restaurant list or empty/error states ──
                 if (isLoading)
                   SliverFillRemaining(
                     child: Center(child: CircularProgressIndicator(color: Colors.orange)),
@@ -382,7 +311,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       ),
                     ),
                   ),
-
                 SliverToBoxAdapter(child: SizedBox(height: 20)),
               ],
             );
