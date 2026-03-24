@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quickfood/features/shared/services/cartProvider.dart';
+import 'package:quickfood/features/shared/services/order_model.dart';
 import 'Orderstatusscreen.dart';
-import 'package:quickfood/features/shared/services/orderProvider.dart';
-
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Dark color palette from your image
-    const Color darkBg = Color(0xFF121223); 
+    const Color darkBg = Color(0xFF121223);
     const Color cardColor = Color(0xFF1E1E2E);
 
     return Scaffold(
@@ -31,11 +29,9 @@ class CartScreen extends StatelessWidget {
         ),
         title: const Text('Cart', style: TextStyle(color: Colors.white, fontSize: 18)),
         actions: [
-          // Clear Cart Button
           Consumer<CartProvider>(
             builder: (context, cart, child) {
               if (cart.items.isEmpty) return const SizedBox.shrink();
-              
               return IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.white),
                 onPressed: () => _showClearCartDialog(context, cart),
@@ -48,14 +44,60 @@ class CartScreen extends StatelessWidget {
         builder: (context, cart, child) {
           final cartItems = cart.items.values.toList();
 
-          // Empty Cart State
-          if (cartItems.isEmpty) {
-            return _buildEmptyCart(context);
-          }
+          if (cartItems.isEmpty) return _buildEmptyCart(context);
 
           return Column(
             children: [
-              // 1. List of Cart Items
+              // ── Closed restaurant banner ──────────────────────────────────
+              if (cart.status == CartStatus.closed)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  color: Colors.red.withOpacity(0.15),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.storefront, color: Colors.redAccent, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${cart.currentRestaurant} is currently closed. '
+                          'Your cart is saved.',
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontFamily: 'Sen',
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // ── Error banner ──────────────────────────────────────────────
+              if (cart.status == CartStatus.error && cart.errorMessage != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  color: Colors.orange.withOpacity(0.15),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.orange, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          cart.errorMessage!,
+                          style: const TextStyle(
+                            color: Colors.orange,
+                            fontFamily: 'Sen',
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // ── Cart items list ───────────────────────────────────────────
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -67,7 +109,7 @@ class CartScreen extends StatelessWidget {
                 ),
               ),
 
-              // 2. Bottom Sheet for Restaurant, Total, and Order
+              // ── Bottom summary + order button ─────────────────────────────
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
@@ -101,11 +143,17 @@ class CartScreen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.restaurant, color: Colors.orange, size: 20),
+                            Icon(
+                              Icons.restaurant,
+                              color: cart.status == CartStatus.closed
+                                  ? Colors.red
+                                  : Colors.orange,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                cart.currentRestaurant ?? "No items",
+                                cart.currentRestaurant ?? 'No items',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.blueGrey,
@@ -113,11 +161,33 @@ class CartScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
+                            // Open/closed pill
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: cart.restaurantIsOpen
+                                    ? Colors.green.withOpacity(0.1)
+                                    : Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                cart.restaurantIsOpen ? 'Open' : 'Closed',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: cart.restaurantIsOpen
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
+
                       const SizedBox(height: 16),
-                      
+
                       // Total
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -140,32 +210,11 @@ class CartScreen extends StatelessWidget {
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 24),
-                      
-                      // Place Order Button
-                      ElevatedButton(
-                        onPressed: cartItems.isEmpty 
-                            ? null 
-                            : () => _placeOrder(context, cart),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          disabledBackgroundColor: Colors.grey,
-                          minimumSize: const Size(double.infinity, 60),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          "PLACE ORDER",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
+
+                      // Place Order button — disabled when closed or submitting
+                      _buildOrderButton(context, cart),
                     ],
                   ),
                 ),
@@ -177,81 +226,92 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyCart(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.shopping_cart_outlined,
-            size: 120,
-            color: Colors.white.withOpacity(0.3),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Your cart is empty',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Add items from restaurants to get started',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+  // ── Order button ────────────────────────────────────────────────────────────
+
+  Widget _buildOrderButton(BuildContext context, CartProvider cart) {
+    final isSubmitting = cart.status == CartStatus.submitting;
+    final isClosed = cart.status == CartStatus.closed;
+
+    return ElevatedButton(
+      onPressed: cart.canCheckout ? () => _placeOrder(context, cart) : null,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isClosed ? Colors.grey[400] : Colors.orange,
+        disabledBackgroundColor: Colors.grey[300],
+        minimumSize: const Size(double.infinity, 60),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        elevation: 0,
+      ),
+      child: isSubmitting
+          ? const SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2.5,
               ),
-            ),
-            child: const Text(
-              'Browse Restaurants',
-              style: TextStyle(
+            )
+          : Text(
+              isClosed ? 'RESTAURANT IS CLOSED' : 'PLACE ORDER',
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
+                letterSpacing: 0.5,
               ),
             ),
-          ),
-        ],
-      ),
     );
   }
 
-  Widget _buildSummaryRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.grey,
+  // ── Place order ─────────────────────────────────────────────────────────────
+
+  Future<void> _placeOrder(BuildContext context, CartProvider cart) async {
+    // Snapshot data before async gap — cart clears on success
+    final restaurantName = cart.currentRestaurant ?? 'Restaurant';
+    final orderItems = cart.items.values
+        .map((i) => OrderItem(
+              menuItemId: i.menuItemId,
+              name: i.name,
+              price: i.price,
+              quantity: i.quantity,
+              imageUrl: i.imageUrl,
+            ))
+        .toList();
+    final total = cart.totalPrice;
+
+    final orderId = await cart.placeOrder();
+
+    if (!context.mounted) return;
+
+    if (orderId != null) {
+      // Success — navigate to order tracking
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OrderStatusScreen(
+            orderId: orderId,
+            restaurantName: restaurantName,
+            items: orderItems,
+            totalPrice: total,
           ),
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
+      );
+    } else {
+      // Error banner is shown via cart.status — no extra snackbar needed
+      // but add one as fallback
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(cart.errorMessage ?? 'Failed to place order'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
         ),
-      ],
-    );
+      );
+    }
   }
 
-  Widget _buildCartItem(BuildContext context, item, Color cardColor, CartProvider cart) {
+  // ── Cart item row ────────────────────────────────────────────────────────────
+
+  Widget _buildCartItem(
+      BuildContext context, CartItem item, Color cardColor, CartProvider cart) {
     return Dismissible(
       key: Key(item.id),
       direction: DismissDirection.endToStart,
@@ -273,11 +333,6 @@ class CartScreen extends StatelessWidget {
             content: Text('${item.name} removed from cart'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 2),
-            action: SnackBarAction(
-              label: 'OK',
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
           ),
         );
       },
@@ -300,21 +355,17 @@ class CartScreen extends StatelessWidget {
                     : null,
               ),
               child: item.imageUrl.isEmpty
-                  ? Icon(
-                      Icons.fastfood,
-                      size: 40,
-                      color: Colors.white.withOpacity(0.3),
-                    )
+                  ? Icon(Icons.fastfood,
+                      size: 40, color: Colors.white.withOpacity(0.3))
                   : null,
             ),
             const SizedBox(width: 15),
-            
-            // Item Details
+
+            // Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Name and Delete Button
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -332,13 +383,14 @@ class CartScreen extends StatelessWidget {
                       ),
                       GestureDetector(
                         onTap: () async {
-                          final confirm = await _showRemoveItemDialog(context, item.name);
+                          final confirm =
+                              await _showRemoveItemDialog(context, item.name);
                           if (confirm == true) {
                             await cart.removeItem(item.id);
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('${item.name} removed from cart'),
+                                  content: Text('${item.name} removed'),
                                   backgroundColor: Colors.red,
                                   duration: const Duration(seconds: 1),
                                 ),
@@ -346,27 +398,20 @@ class CartScreen extends StatelessWidget {
                             }
                           }
                         },
-                        child: const Icon(
-                          Icons.cancel,
-                          color: Colors.redAccent,
-                          size: 24,
-                        ),
+                        child: const Icon(Icons.cancel,
+                            color: Colors.redAccent, size: 24),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  
-                  // Price
                   Text(
                     "${item.price} Kč × ${item.quantity}",
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
-                      fontSize: 14,
-                    ),
+                        color: Colors.white.withOpacity(0.7), fontSize: 14),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "${item.price * item.quantity} Kč",
+                    "${item.subtotal} Kč",
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -374,29 +419,24 @@ class CartScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  
-                  // Quantity Controls
+
+                  // +/- controls
                   Row(
                     children: [
                       _quantityBtn(
-                        Icons.remove,
-                        () => cart.decrementQuantity(item.id),
-                      ),
+                          Icons.remove, () => cart.decrementQuantity(item.id)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
-                          "${item.quantity}",
+                          '${item.quantity}',
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
                       _quantityBtn(
-                        Icons.add,
-                        () => cart.incrementQuantity(item.id),
-                      ),
+                          Icons.add, () => cart.incrementQuantity(item.id)),
                     ],
                   ),
                 ],
@@ -419,57 +459,50 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  // Show confirmation dialog before removing item
+  // ── Dialogs ──────────────────────────────────────────────────────────────────
+
   Future<bool?> _showRemoveItemDialog(BuildContext context, String itemName) {
     return showDialog<bool>(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Remove Item'),
-          content: Text('Remove $itemName from cart?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              child: const Text('Remove'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Remove Item'),
+        content: Text('Remove $itemName from cart?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
     );
   }
 
-  // Show confirmation dialog before clearing cart
-  Future<void> _showClearCartDialog(BuildContext context, CartProvider cart) async {
+  Future<void> _showClearCartDialog(
+      BuildContext context, CartProvider cart) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Clear Cart'),
-          content: const Text('Are you sure you want to remove all items from your cart?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              child: const Text('Clear All'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Clear Cart'),
+        content: const Text('Remove all items from your cart?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
     );
 
     if (confirm == true) {
@@ -486,77 +519,43 @@ class CartScreen extends StatelessWidget {
     }
   }
 
-  // Place order function
-  Future<void> _placeOrder(BuildContext context, CartProvider cart) async {
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Colors.orange),
+  Widget _buildEmptyCart(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.shopping_cart_outlined,
+              size: 120, color: Colors.white.withOpacity(0.3)),
+          const SizedBox(height: 24),
+          const Text('Your cart is empty',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Text(
+            'Add items from restaurants to get started',
+            style:
+                TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 16),
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Browse Restaurants',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
+          ),
+        ],
       ),
     );
-
-    try {
-      // TODO: Implement your order placement logic here
-      // Example:
-      // - Create order document in Firestore
-      // - Add order items
-      // - Process payment
-      // - Send notifications
-      
-      await Future.delayed(const Duration(seconds: 2)); // Simulating API call
-      
-      // Prepare order data
-      final orderItems = cart.items.values.map((cartItem) {
-        return OrderItem(
-          name: cartItem.name,
-          category: 'Food', // You can add category to CartItem if needed
-          price: cartItem.price,
-          quantity: cartItem.quantity,
-          imageUrl: cartItem.imageUrl,
-        );
-      }).toList();
-      
-      final restaurantName = cart.currentRestaurant ?? 'Restaurant';
-      final totalPrice = cart.totalPrice;
-      final orderId = DateTime.now().millisecondsSinceEpoch.toString();
-      
-      // Clear cart after successful order
-      await cart.clearCart();
-      
-      if (context.mounted) {
-        // Close loading dialog
-        Navigator.pop(context);
-        
-        // Navigate to Order Status Screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OrderStatusScreen(
-              orderId: orderId,
-              restaurantName: restaurantName,
-              items: orderItems,
-              totalPrice: totalPrice,
-              currentStatus: OrderStatusEnum.restaurantConfirmed,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        // Close loading dialog
-        Navigator.pop(context);
-        
-        // Show error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to place order: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
   }
 }

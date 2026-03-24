@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:quickfood/features/shared/services/order_model.dart'; // 1. Using the real global model
+import 'package:quickfood/features/shared/services/order_service.dart';
 
 class OrderStatusScreen extends StatelessWidget {
   final String orderId;
   final String restaurantName;
-  final List<OrderItem> items;
+  final List<OrderItem> items; // Now using the OrderItem from order_model.dart
   final int totalPrice;
-  final OrderStatusEnum currentStatus;
+  final OrderStatus currentStatus; // 2. Using your real OrderStatus enum
+  final OrderService _orderService = OrderService();
 
-  const OrderStatusScreen({
+  OrderStatusScreen({
     super.key,
     required this.orderId,
     required this.restaurantName,
     required this.items,
     required this.totalPrice,
-    this.currentStatus = OrderStatusEnum.restaurantConfirmed,
+    // Default to pending, which matches the start of your lifecycle
+    this.currentStatus = OrderStatus.pending, 
   });
 
   @override
@@ -139,32 +143,64 @@ class OrderStatusScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // Order Status Timeline
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildStatusStep(
-                        'Restaurant\nConfirmed',
-                        OrderStatusEnum.restaurantConfirmed,
-                        currentStatus,
-                      ),
-                      _buildStatusConnector(
-                        currentStatus.index >= OrderStatusEnum.preparing.index,
-                      ),
-                      _buildStatusStep(
-                        'Preparing\nYour Order',
-                        OrderStatusEnum.preparing,
-                        currentStatus,
-                      ),
-                      _buildStatusConnector(
-                        currentStatus.index >= OrderStatusEnum.readyForPickup.index,
-                      ),
-                      _buildStatusStep(
-                        'Ready For\nPickup',
-                        OrderStatusEnum.readyForPickup,
-                        currentStatus,
-                      ),
-                    ],
+                  // Listen to order document so status updates in real time.
+                  StreamBuilder<OrderStatus>(
+                    stream: _orderService.watchOrderStatus(orderId),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return Text(
+                          'Status unavailable: ${snapshot.error}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.red,
+                          ),
+                        );
+                      }
+
+                      final liveStatus = snapshot.data ?? currentStatus;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Current: ${_statusLabel(liveStatus)}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black54,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildStatusStep(
+                                'Confirmed',
+                                OrderStatus.restaurantConfirmed,
+                                liveStatus,
+                              ),
+                              _buildStatusConnector(
+                                liveStatus.index >= OrderStatus.preparing.index,
+                              ),
+                              _buildStatusStep(
+                                'Preparing\nYour Order',
+                                OrderStatus.preparing,
+                                liveStatus,
+                              ),
+                              _buildStatusConnector(
+                                liveStatus.index >= OrderStatus.ready.index,
+                              ),
+                              _buildStatusStep(
+                                'Ready For\nPickup',
+                                OrderStatus.ready,
+                                liveStatus,
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -220,8 +256,10 @@ class OrderStatusScreen extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
+                // Removed item.category since your global OrderItem doesn't use it
+                // Instead, showing price per unit if they order multiple
                 Text(
-                  item.category,
+                  '${item.price} Kč each',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.5),
                     fontSize: 14,
@@ -229,7 +267,8 @@ class OrderStatusScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${item.price} Kč',
+                  // 4. Using the subtotal getter from your model
+                  '${item.subtotal} Kč', 
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -261,8 +300,29 @@ class OrderStatusScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusStep(String label, OrderStatusEnum stepStatus, OrderStatusEnum currentStatus) {
+  String _statusLabel(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return 'Pending';
+      case OrderStatus.restaurantConfirmed:
+        return 'Confirmed';
+      case OrderStatus.preparing:
+        return 'Preparing';
+      case OrderStatus.ready:
+        return 'Ready For Pickup';
+      case OrderStatus.completed:
+        return 'Completed';
+      case OrderStatus.cancelled:
+        return 'Cancelled';
+    }
+  }
+
+  // 5. Updated to use OrderStatus instead of OrderStatusEnum
+  Widget _buildStatusStep(String label, OrderStatus stepStatus, OrderStatus currentStatus) {
+    // A step is complete if the current status index is >= the step's index
     final isCompleted = currentStatus.index >= stepStatus.index;
+    final accentColor = _stepColor(stepStatus);
+    final stepIcon = _stepIcon(stepStatus);
     
     return Column(
       children: [
@@ -270,15 +330,24 @@ class OrderStatusScreen extends StatelessWidget {
           width: 60,
           height: 60,
           decoration: BoxDecoration(
-            color: isCompleted 
-                ? const Color(0xFFD1D5DB) 
-                : const Color(0xFFE5E7EB),
+            color: isCompleted
+                ? accentColor
+                : accentColor.withOpacity(0.15),
             shape: BoxShape.circle,
+            boxShadow: isCompleted
+                ? [
+                    BoxShadow(
+                      color: accentColor.withOpacity(0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: Icon(
-            Icons.check,
-            color: isCompleted ? Colors.white : const Color(0xFFD1D5DB),
-            size: 32,
+            isCompleted ? Icons.check : stepIcon,
+            color: isCompleted ? Colors.white : accentColor,
+            size: 30,
           ),
         ),
         const SizedBox(height: 8),
@@ -289,7 +358,7 @@ class OrderStatusScreen extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              color: isCompleted ? Colors.black87 : Colors.grey,
+              color: isCompleted ? accentColor : Colors.grey.shade600,
               fontWeight: isCompleted ? FontWeight.w600 : FontWeight.normal,
               height: 1.2,
             ),
@@ -297,6 +366,32 @@ class OrderStatusScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Color _stepColor(OrderStatus stepStatus) {
+    switch (stepStatus) {
+      case OrderStatus.restaurantConfirmed:
+        return const Color(0xFF3B82F6);
+      case OrderStatus.preparing:
+        return const Color(0xFFF59E0B);
+      case OrderStatus.ready:
+        return const Color(0xFF10B981);
+      default:
+        return const Color(0xFF9CA3AF);
+    }
+  }
+
+  IconData _stepIcon(OrderStatus stepStatus) {
+    switch (stepStatus) {
+      case OrderStatus.restaurantConfirmed:
+        return Icons.storefront_outlined;
+      case OrderStatus.preparing:
+        return Icons.restaurant_menu;
+      case OrderStatus.ready:
+        return Icons.inventory_2_outlined;
+      default:
+        return Icons.circle_outlined;
+    }
   }
 
   Widget _buildStatusConnector(bool isActive) {
@@ -308,29 +403,4 @@ class OrderStatusScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-// Renamed enum to avoid conflict with OrderProvider's OrderStatus
-enum OrderStatusEnum {
-  restaurantConfirmed,
-  preparing,
-  readyForPickup,
-  completed,
-}
-
-// Order Item Model
-class OrderItem {
-  final String name;
-  final String category;
-  final int price;
-  final int quantity;
-  final String imageUrl;
-
-  OrderItem({
-    required this.name,
-    required this.category,
-    required this.price,
-    required this.quantity,
-    this.imageUrl = '',
-  });
 }

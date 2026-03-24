@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:quickfood/features/shared/services/orderProvider.dart';
+import 'package:quickfood/features/shared/services/order_provider.dart';
+import 'package:quickfood/features/shared/services/order_model.dart';
 import 'orderstatusscreen.dart';
 
 class MyOrdersScreen extends StatefulWidget {
@@ -19,7 +20,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     
-    // Refresh orders when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<OrderProvider>(context, listen: false).loadOrders();
     });
@@ -89,15 +89,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
           return TabBarView(
             controller: _tabController,
             children: [
-              // Active Orders Tab
               _buildOrdersList(
                 orders: orderProvider.activeOrders,
                 emptyMessage: 'No active orders',
                 emptySubMessage: 'Your active orders will appear here',
                 isActive: true,
               ),
-
-              // Order History Tab
               _buildOrdersList(
                 orders: orderProvider.completedOrders,
                 emptyMessage: 'No order history',
@@ -111,6 +108,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
     );
   }
 
+  /// Builds a list of orders with refresh capability and empty state handling.
   Widget _buildOrdersList({
     required List<Order> orders,
     required String emptyMessage,
@@ -137,6 +135,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
     );
   }
 
+  /// Builds an empty state widget with call-to-action button.
   Widget _buildEmptyState(String message, String subMessage) {
     return Center(
       child: Column(
@@ -191,27 +190,19 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
     );
   }
 
+  /// Builds an individual order card with status badge and order details.
   Widget _buildOrderCard(Order order, bool isActive) {
     return GestureDetector(
       onTap: () {
-        // Navigate to Order Status Screen
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => OrderStatusScreen(
               orderId: order.id,
               restaurantName: order.restaurantName,
-              items: order.items.map((item) {
-                return OrderItem(
-                  name: item['name'] ?? '',
-                  category: item['category'] ?? 'Food',
-                  price: item['price'] ?? 0,
-                  quantity: item['quantity'] ?? 1,
-                  imageUrl: item['imageUrl'] ?? '',
-                );
-              }).toList(),
-              totalPrice: order.totalPrice,
-              currentStatus: _mapOrderStatus(order.status),
+              items: order.items,
+              totalPrice: order.total,
+              currentStatus: order.status,
             ),
           ),
         );
@@ -237,11 +228,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Restaurant Name & Status
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Restaurant Name
                 Expanded(
                   child: Row(
                     children: [
@@ -268,14 +257,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Status Badge
                 _buildStatusBadge(order.status, isActive),
               ],
             ),
-
             const SizedBox(height: 12),
-
-            // Order Items Count & Total Price
             Row(
               children: [
                 Icon(
@@ -302,7 +287,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
                 ),
                 const SizedBox(width: 16),
                 Text(
-                  '${order.totalPrice} Kč',
+                  '${order.total} Kč',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -312,10 +297,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
-            // Timestamp
             Row(
               children: [
                 Icon(
@@ -334,8 +316,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
                 ),
               ],
             ),
-
-            // Order ID (for active orders only)
             if (isActive) ...[
               const SizedBox(height: 8),
               Text(
@@ -353,6 +333,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
     );
   }
 
+  /// Builds a status badge widget with appropriate color and icon based on order status.
   Widget _buildStatusBadge(OrderStatus status, bool isActive) {
     Color backgroundColor;
     Color textColor;
@@ -365,37 +346,31 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
         textColor = Colors.orange;
         statusText = 'Pending';
         icon = Icons.access_time;
-        break;
       case OrderStatus.restaurantConfirmed:
         backgroundColor = Colors.blue.withOpacity(0.1);
         textColor = Colors.blue;
         statusText = 'Confirmed';
         icon = Icons.check_circle_outline;
-        break;
       case OrderStatus.preparing:
         backgroundColor = Colors.purple.withOpacity(0.1);
         textColor = Colors.purple;
         statusText = 'Preparing';
         icon = Icons.restaurant_menu;
-        break;
-      case OrderStatus.readyForPickup:
+      case OrderStatus.ready:
         backgroundColor = Colors.green.withOpacity(0.1);
         textColor = Colors.green;
         statusText = 'Ready';
         icon = Icons.check_circle;
-        break;
       case OrderStatus.completed:
         backgroundColor = Colors.grey.withOpacity(0.1);
         textColor = Colors.grey;
         statusText = 'Completed';
         icon = Icons.check_circle;
-        break;
       case OrderStatus.cancelled:
         backgroundColor = Colors.red.withOpacity(0.1);
         textColor = Colors.red;
         statusText = 'Cancelled';
         icon = Icons.cancel;
-        break;
     }
 
     return Container(
@@ -423,6 +398,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
     );
   }
 
+  /// Formats a timestamp into a human-readable relative time string.
   String _formatTimestamp(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
@@ -439,24 +415,4 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
       return DateFormat('MMM d, y').format(dateTime);
     }
   }
-
-  // Map OrderProvider's OrderStatus to OrderStatusScreen's OrderStatus
-  OrderStatusEnum _mapOrderStatus(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-      case OrderStatus.restaurantConfirmed:
-        return OrderStatusEnum.restaurantConfirmed;
-      case OrderStatus.preparing:
-        return OrderStatusEnum.preparing;
-      case OrderStatus.readyForPickup:
-        return OrderStatusEnum.readyForPickup;
-      case OrderStatus.completed:
-        return OrderStatusEnum.readyForPickup; // Show as ready if completed
-      case OrderStatus.cancelled:
-        return OrderStatusEnum.restaurantConfirmed; // Default fallback
-    }
-  }
 }
-
-// Note: You'll need to rename the OrderStatus enum in OrderStatusScreen to avoid conflicts
-// Rename it to OrderStatusEnum in orderstatusscreen.dart

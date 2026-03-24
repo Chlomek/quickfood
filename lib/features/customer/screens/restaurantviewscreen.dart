@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'itemdetailsscreen.dart';
 import 'package:quickfood/features/customer/widgets/cart_icon.dart';
+import 'package:quickfood/features/shared/services/cartProvider.dart';
 
 class RestaurantViewScreen extends StatefulWidget {
   final String restaurantId;
@@ -350,6 +352,7 @@ class _RestaurantViewScreenState extends State<RestaurantViewScreen> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => ItemDetailsScreen(
+                                        restaurantId: widget.restaurantId,
                                         itemId: doc.id,
                                         itemName: menuItem['name'] ?? 'Item',
                                         restaurantName: menuItem['restaurantName'] ?? widget.restaurantName,
@@ -363,14 +366,65 @@ class _RestaurantViewScreenState extends State<RestaurantViewScreen> {
                                   );
                                 },
                                 onAddToCart: () {
-                                  // Quick add to cart
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('${menuItem['name']} added to cart!'),
-                                      backgroundColor: Colors.green,
-                                      duration: Duration(seconds: 1),
-                                    ),
+                                  final cartProvider =
+                                      Provider.of<CartProvider>(context, listen: false);
+
+                                  final cartItem = CartItem(
+                                    id: doc.id,
+                                    menuItemId: doc.id,
+                                    name: menuItem['name'] ?? 'Item',
+                                    price: menuItem['price'] ?? 0,
+                                    imageUrl: menuItem['imageUrl'] ?? '',
+                                    quantity: 1,
                                   );
+
+                                  cartProvider
+                                      .addItem(
+                                    item: cartItem,
+                                    restaurantId: widget.restaurantId,
+                                    restaurantName: widget.restaurantName,
+                                    onConflict: (currentRestaurantName) async {
+                                      return await showDialog<bool>(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              title: const Text('Start new basket?'),
+                                              content: Text(
+                                                'You already have items from $currentRestaurantName. Clear cart and start a new order from ${widget.restaurantName}?',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(ctx, false),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(ctx, true),
+                                                  child: const Text(
+                                                    'Clear Cart',
+                                                    style: TextStyle(color: Colors.red),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ) ??
+                                          false;
+                                    },
+                                  )
+                                      .then((added) {
+                                    if (!context.mounted) return;
+
+                                    if (added) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                              '${menuItem['name'] ?? 'Item'} added to cart!'),
+                                          backgroundColor: Colors.green,
+                                          duration: const Duration(seconds: 1),
+                                        ),
+                                      );
+                                    }
+                                  });
                                 },
                               );
                             },

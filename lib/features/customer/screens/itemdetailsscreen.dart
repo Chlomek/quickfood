@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 class ItemDetailsScreen extends StatefulWidget {
   final String itemId;
   final String itemName;
+  final String restaurantId;
   final String restaurantName;
   final String imageUrl;
   final String description;
@@ -16,6 +17,7 @@ class ItemDetailsScreen extends StatefulWidget {
   const ItemDetailsScreen({
     required this.itemId,
     required this.itemName,
+    required this.restaurantId,
     required this.restaurantName,
     this.imageUrl = '',
     this.description = '',
@@ -51,23 +53,52 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
     // 1. Access the CartProvider
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
-    try {
-      // 2. Attempt to add the item
-      await cartProvider.addToCart(
-        CartItem( // Make sure your CartItem model is imported
-          id: widget.itemId,
-          name: widget.itemName,
-          price: widget.price,
-          imageUrl: widget.imageUrl,
-          restaurantName: widget.restaurantName,
-          quantity: quantity,
-        ),
-      );
+    // 2. Create the CartItem using your new model's required fields
+    final item = CartItem(
+      id: widget.itemId, 
+      menuItemId: widget.itemId, // Your new model requires both
+      name: widget.itemName,
+      price: widget.price,
+      imageUrl: widget.imageUrl,
+      quantity: quantity,
+    );
 
-      // 3. Safety check: Ensure the widget is still on screen before showing UI
-      if (!mounted) return;
+    // 3. Call the updated addItem method
+    final success = await cartProvider.addItem(
+      item: item,
+      // Note: Since ItemDetailsScreen doesn't have a restaurantId passed to it yet, 
+      // we'll use the name as a placeholder ID. 
+      restaurantId: widget.restaurantId, 
+      restaurantName: widget.restaurantName,
+      onConflict: (currentRestaurantName) async {
+        // 4. This automatically handles the "Different Restaurant" dialog!
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text("Start new basket?"),
+            content: Text(
+              "You already have items from $currentRestaurantName. Clear cart and start a new order from ${widget.restaurantName}?"
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false), // User cancelled
+                child: const Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true), // User confirmed
+                child: const Text("Clear Cart", style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+        ) ?? false;
+      },
+    );
 
-      // 4. Show success message
+    // Safety check: Ensure the widget is still on screen
+    if (!mounted) return;
+
+    // 5. If successful (or if they cleared the old cart and proceeded), show success!
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${widget.itemName} (x$quantity) added to cart!'),
@@ -76,33 +107,8 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
         ),
       );
       
-      // 5. Navigate back to the menu
+      // Navigate back to the menu
       Navigator.pop(context);
-
-    } catch (e) {
-      // 6. Handle the "Different Restaurant" error
-      if (!mounted) return;
-      
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text("Start new basket?"),
-          content: Text(e.toString().replaceAll("Exception: ", "")),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx), 
-              child: const Text("Cancel")
-            ),
-            TextButton(
-              onPressed: () {
-                // You can call cartProvider.clearCart() here later!
-                Navigator.pop(ctx);
-              }, 
-              child: const Text("Clear Cart", style: TextStyle(color: Colors.red))
-            ),
-          ],
-        ),
-      );
     }
   }
 

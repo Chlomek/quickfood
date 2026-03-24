@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quickfood/features/shared/services/cartProvider.dart';
-import 'package:quickfood/features/shared/services/orderProvider.dart';
+import 'package:quickfood/features/shared/services/order_provider.dart';
 import 'package:quickfood/features/customer/screens/cartscreen.dart';
-import 'package:quickfood/features/customer/screens/myordersscreen.dart';
+import 'package:quickfood/features/shared/services/order_model.dart';
+import 'package:quickfood/features/customer/screens/orderstatusscreen.dart';
 
 class CartBadgeIcon extends StatelessWidget {
   const CartBadgeIcon({super.key});
@@ -14,7 +15,8 @@ class CartBadgeIcon extends StatelessWidget {
       builder: (context, cart, orderProvider, child) {
         // If there's an active order, show Orders icon instead of Cart
         if (orderProvider.hasActiveOrder) {
-          return _buildOrdersIcon(context, orderProvider.activeOrdersCount);
+          final activeOrder = orderProvider.activeOrders.first;
+          return _buildOrdersIcon(context, activeOrder);
         }
 
         // Otherwise, show Cart icon
@@ -56,7 +58,7 @@ class CartBadgeIcon extends StatelessWidget {
             ),
           ),
           // The Dynamic Orange Badge
-          if (cart.totalItems > 0)
+          if (cart.itemCount > 0)
             Positioned(
               right: 0,
               top: 0,
@@ -72,7 +74,7 @@ class CartBadgeIcon extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    '${cart.totalItems}',
+                    '${cart.itemCount}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
@@ -89,12 +91,20 @@ class CartBadgeIcon extends StatelessWidget {
   }
 
   // Orders Icon Widget
-  Widget _buildOrdersIcon(BuildContext context, int activeOrdersCount) {
+  Widget _buildOrdersIcon(BuildContext context, Order activeOrder) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const MyOrdersScreen()),
+          MaterialPageRoute(
+            builder: (context) => OrderStatusScreen(
+              orderId: activeOrder.id,
+              restaurantName: activeOrder.restaurantName,
+              items: activeOrder.items,
+              totalPrice: activeOrder.total,
+              currentStatus: activeOrder.status,
+            ),
+          ),
         );
       },
       child: Stack(
@@ -120,34 +130,33 @@ class CartBadgeIcon extends StatelessWidget {
               size: 24,
             ),
           ),
-          // The Dynamic Green Badge (different color for orders)
-          if (activeOrdersCount > 0)
-            Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.green, // Green for active orders
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(
-                  minWidth: 20,
-                  minHeight: 20,
-                ),
-                child: Center(
-                  child: Text(
-                    '$activeOrdersCount',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Sen',
-                    ),
+          // Active order badge
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 20,
+                minHeight: 20,
+              ),
+              child: const Center(
+                child: Text(
+                  '1',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Sen',
                   ),
                 ),
               ),
             ),
+          ),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:quickfood/features/customer/screens/myordersscreen.dart';
 
 Future<void> seedMenuData() async {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -134,7 +135,20 @@ class DrawerMenu extends StatelessWidget {
               padding: EdgeInsets.zero,
               children: [
                 _buildMenuItem(context, icon: Icons.person_outline, title: 'Profile', onTap: () { Navigator.pop(context); }),
-                _buildMenuItem(context, icon: Icons.receipt_long_outlined, title: 'My Orders', onTap: () { Navigator.pop(context); }),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.receipt_long_outlined,
+                  title: 'My Orders',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MyOrdersScreen(),
+                      ),
+                    );
+                  },
+                ),
                 _buildMenuItem(context, icon: Icons.favorite_outline, title: 'Favorites', onTap: () { Navigator.pop(context); }),
                 _buildMenuItem(context, icon: Icons.settings_outlined, title: 'Settings', onTap: () { Navigator.pop(context); }),
                 _buildMenuItem(context, icon: Icons.help_outline, title: 'Help & Support', onTap: () { Navigator.pop(context); }),

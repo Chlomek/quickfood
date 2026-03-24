@@ -11,7 +11,7 @@ import 'features/shared/services/authWrapper.dart';
 // Your Logic/Providers
 import 'features/shared/services/navigation_service.dart'; 
 import 'features/shared/services/cartProvider.dart';
-import 'features/shared/services/orderProvider.dart'; // NEW
+import 'features/shared/services/order_provider.dart'; // NEW
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +24,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LoginProvider()),
-        ChangeNotifierProvider(create: (_) => CartProvider()..loadCart()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()..loadOrders()), // NEW - Load orders on app start
       ],
       child: const MainApp(),
