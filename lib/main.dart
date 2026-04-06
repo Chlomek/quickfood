@@ -9,7 +9,6 @@ import 'features/shared/screens/loginscreen.dart';
 import 'features/shared/services/authWrapper.dart';
 
 // Your Logic/Providers
-import 'features/shared/services/navigation_service.dart'; 
 import 'features/shared/services/cartProvider.dart';
 import 'features/shared/services/order_provider.dart'; // NEW
 

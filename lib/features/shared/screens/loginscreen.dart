@@ -331,6 +331,38 @@ class LoginProvider extends ChangeNotifier {
     }
   }
 
+  // Resolve the restaurant document id for a restaurant user.
+  Future<String?> _getRestaurantId(String uid) async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(uid).get();
+      final userData = userDoc.data();
+
+      final directId = userData?['restaurantId'];
+      if (directId is String && directId.isNotEmpty) return directId;
+
+      final restaurantIds = userData?['restaurantIds'];
+      if (restaurantIds is List && restaurantIds.isNotEmpty) {
+        final first = restaurantIds.first;
+        if (first is String && first.isNotEmpty) return first;
+      }
+
+      final ownedRestaurant = await _firestore
+          .collection('restaurants')
+          .where('ownerId', isEqualTo: uid)
+          .limit(1)
+          .get();
+
+      if (ownedRestaurant.docs.isNotEmpty) {
+        return ownedRestaurant.docs.first.id;
+      }
+
+      return null;
+    } catch (e) {
+      print('Error getting restaurant id: $e');
+      return null;
+    }
+  }
+
   Future<void> login(BuildContext context) async {
     // Validate inputs first
     if (!_validateInputs()) {
@@ -365,11 +397,27 @@ class LoginProvider extends ChangeNotifier {
 
       // Navigate based on user role
       if (userRole == 'restaurant') {
+        final restaurantId = await _getRestaurantId(userCredential.user!.uid);
+        if (restaurantId == null) {
+          errorMessage = 'No restaurant profile found for this account';
+          notifyListeners();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
         // Navigate to restaurant home screen
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => RestaurantHomeScreen(),
+            builder: (context) => RestaurantHomeScreen(
+              restaurantId: restaurantId,
+            ),
           ),
         );
       } else {

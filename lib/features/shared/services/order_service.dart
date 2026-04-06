@@ -75,7 +75,7 @@ class OrderService {
     if (user == null) return Stream.value([]);
 
     return _orders
-        .where('customerId', isEqualTo: user.uid)
+      .where('customerId', isEqualTo: user.uid)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snap) => snap.docs.map((doc) => Order.fromDoc(doc)).toList());

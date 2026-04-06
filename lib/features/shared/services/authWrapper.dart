@@ -8,6 +8,30 @@ import '../../restaurant/screens/restauranthomescreen.dart';
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
+  Future<String?> _resolveRestaurantId(
+      FirebaseFirestore firestore, String uid, Map<String, dynamic>? userData) async {
+    final directId = userData?['restaurantId'];
+    if (directId is String && directId.isNotEmpty) return directId;
+
+    final restaurantIds = userData?['restaurantIds'];
+    if (restaurantIds is List && restaurantIds.isNotEmpty) {
+      final first = restaurantIds.first;
+      if (first is String && first.isNotEmpty) return first;
+    }
+
+    final ownedRestaurant = await firestore
+        .collection('restaurants')
+        .where('ownerId', isEqualTo: uid)
+        .limit(1)
+        .get();
+
+    if (ownedRestaurant.docs.isNotEmpty) {
+      return ownedRestaurant.docs.first.id;
+    }
+
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -36,7 +60,27 @@ class AuthWrapper extends StatelessWidget {
 
               
               if (role == 'restaurant') {
-                return RestaurantHomeScreen();
+                return FutureBuilder<String?>(
+                  future: _resolveRestaurantId(
+                    FirebaseFirestore.instance,
+                    authSnapshot.data!.uid,
+                    userData,
+                  ),
+                  builder: (context, restaurantSnapshot) {
+                    if (restaurantSnapshot.connectionState == ConnectionState.waiting) {
+                      return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+
+                    final restaurantId = restaurantSnapshot.data;
+                    if (restaurantId == null) {
+                      return const LoginScreen();
+                    }
+
+                    return RestaurantHomeScreen(restaurantId: restaurantId);
+                  },
+                );
               } else {
                 return CustomerHomeScreen();
               }
