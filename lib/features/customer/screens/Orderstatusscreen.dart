@@ -17,7 +17,7 @@ class OrderStatusScreen extends StatelessWidget {
     required this.items,
     required this.totalPrice,
     // Default to pending, which matches the start of your lifecycle
-    this.currentStatus = OrderStatus.pending, 
+    this.currentStatus = OrderStatus.pending,
   });
 
   @override
@@ -35,7 +35,11 @@ class OrderStatusScreen extends StatelessWidget {
           child: CircleAvatar(
             backgroundColor: Colors.white.withOpacity(0.1),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                size: 18,
+                color: Colors.white,
+              ),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -91,7 +95,10 @@ class OrderStatusScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF0F4F9),
                       borderRadius: BorderRadius.circular(12),
@@ -102,6 +109,38 @@ class OrderStatusScreen extends StatelessWidget {
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF5A6C7D),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  const Text(
+                    'ORDER ID',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F4F9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _shortOrderId(orderId),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1F2937),
+                        letterSpacing: 1.2,
                       ),
                     ),
                   ),
@@ -268,7 +307,7 @@ class OrderStatusScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   // 4. Using the subtotal getter from your model
-                  '${item.subtotal} Kč', 
+                  '${item.subtotal} Kč',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -317,22 +356,29 @@ class OrderStatusScreen extends StatelessWidget {
     }
   }
 
+  String _shortOrderId(String id) {
+    if (id.length <= 6) return id.toUpperCase();
+    return id.substring(0, 6).toUpperCase();
+  }
+
   // 5. Updated to use OrderStatus instead of OrderStatusEnum
-  Widget _buildStatusStep(String label, OrderStatus stepStatus, OrderStatus currentStatus) {
+  Widget _buildStatusStep(
+    String label,
+    OrderStatus stepStatus,
+    OrderStatus currentStatus,
+  ) {
     // A step is complete if the current status index is >= the step's index
     final isCompleted = currentStatus.index >= stepStatus.index;
     final accentColor = _stepColor(stepStatus);
     final stepIcon = _stepIcon(stepStatus);
-    
+
     return Column(
       children: [
         Container(
           width: 60,
           height: 60,
           decoration: BoxDecoration(
-            color: isCompleted
-                ? accentColor
-                : accentColor.withOpacity(0.15),
+            color: isCompleted ? accentColor : accentColor.withOpacity(0.15),
             shape: BoxShape.circle,
             boxShadow: isCompleted
                 ? [

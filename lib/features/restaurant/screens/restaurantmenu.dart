@@ -8,6 +8,7 @@ import 'restaurantprofilesetupscreen.dart';
 import '../../shared/screens/profilesettingsscreen.dart';
 import '../widgets/restaurant_drawer_menu.dart';
 import '../widgets/restaurant_bottom_navbar.dart';
+import '../widgets/restaurant_top_header.dart';
 
 class RestaurantMenuScreen extends StatefulWidget {
   final String restaurantId;
@@ -25,6 +26,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   String _selectedCategory = 'All';
   bool _isOpen = false;
   bool _loadingToggle = false;
+  String _restaurantName = 'My Restaurant';
 
   @override
   void initState() {
@@ -38,8 +40,13 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
         .doc(widget.restaurantId)
         .get();
     if (doc.exists && mounted) {
+      final data = doc.data() as Map<String, dynamic>;
+      final fetchedName = (data['name'] ?? data['restaurantName'] ?? '')
+          .toString()
+          .trim();
       setState(() {
-        _isOpen = (doc.data() as Map<String, dynamic>)['isOpen'] ?? false;
+        _isOpen = data['isOpen'] ?? false;
+        _restaurantName = fetchedName.isEmpty ? 'My Restaurant' : fetchedName;
       });
     }
   }
@@ -272,82 +279,12 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   }
 
   Widget _buildHeader() {
-    final user = _auth.currentUser;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => _showRestaurantMenu(context),
-            child: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.menu, size: 20, color: Color(0xFF2D2D2D)),
-            ),
-          ),
-          Expanded(
-            child: Column(
-              children: const [
-                Text(
-                  'LOCATION',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                    color: Color(0xFFFF6B35),
-                    fontFamily: 'Sen',
-                  ),
-                ),
-                SizedBox(height: 2),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'My Restaurant',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A2E),
-                        fontFamily: 'Sen',
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 18,
-                      color: Color(0xFF1A1A2E),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          CircleAvatar(
-            radius: 21,
-            backgroundColor: const Color(0xFF97A7B8),
-            child: Text(
-              user?.displayName?.substring(0, 1).toUpperCase() ?? 'R',
-              style: const TextStyle(
-                fontFamily: 'Sen',
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return RestaurantTopHeader(
+      restaurantName: _restaurantName,
+      isOpen: _isOpen,
+      isLoading: _loadingToggle,
+      onMenuTap: () => _showRestaurantMenu(context),
+      onToggleOpenTap: _toggleOpen,
     );
   }
 

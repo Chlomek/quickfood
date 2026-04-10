@@ -50,17 +50,37 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     final isOpen = restaurant['isOpen'] == true;
     if (!isOpen) return false;
 
+    final categoriesText = _restaurantCategoriesText(restaurant).toLowerCase();
+
     if (searchQuery.isNotEmpty) {
       final name = (restaurant['name'] ?? '').toLowerCase();
-      final cats = (restaurant['categories'] ?? '').toLowerCase();
-      if (!name.contains(searchQuery) && !cats.contains(searchQuery))
+      if (!name.contains(searchQuery) && !categoriesText.contains(searchQuery))
         return false;
     }
     if (selectedCategory != 'All') {
-      final cats = (restaurant['categories'] ?? '').toLowerCase();
-      if (!cats.contains(selectedCategory.toLowerCase())) return false;
+      if (!categoriesText.contains(selectedCategory.toLowerCase()))
+        return false;
     }
     return true;
+  }
+
+  String _restaurantCategoriesText(Map<String, dynamic> restaurant) {
+    final categoriesList = restaurant['categoriesList'];
+    if (categoriesList is List) {
+      final values = categoriesList
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+      if (values.isNotEmpty) {
+        return values.join(' - ');
+      }
+    }
+
+    final legacy = (restaurant['categories'] ?? '').toString().trim();
+    if (legacy.isNotEmpty) return legacy;
+
+    final primary = (restaurant['primaryType'] ?? '').toString().trim();
+    return primary.isNotEmpty ? primary : 'Food';
   }
 
   void _openDrawer() {
@@ -255,53 +275,85 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   )
                 else if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
                   SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.restaurant, size: 64, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text(
-                            'No restaurants available',
-                            style: TextStyle(
-                              fontFamily: 'Sen',
-                              fontSize: 16,
-                              color: Colors.grey,
-                            ),
+                    hasScrollBody: false,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 24,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 320),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.restaurant,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'No restaurants available',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Sen',
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   )
                 else if (filteredDocs.isEmpty)
                   SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search_off, size: 64, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text(
-                            'No restaurants found',
-                            style: TextStyle(
-                              fontFamily: 'Sen',
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
+                    hasScrollBody: false,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 24,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 320),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'No restaurants found',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Sen',
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                searchQuery.isNotEmpty
+                                    ? 'Try a different search term'
+                                    : 'Try selecting a different category',
+                                textAlign: TextAlign.center,
+                                softWrap: true,
+                                style: TextStyle(
+                                  fontFamily: 'Sen',
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
                           ),
-                          SizedBox(height: 8),
-                          Text(
-                            searchQuery.isNotEmpty
-                                ? 'Try a different search term'
-                                : 'Try selecting a different category',
-                            style: TextStyle(
-                              fontFamily: 'Sen',
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   )
@@ -315,7 +367,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         return RestaurantCard(
                           restaurantId: doc.id,
                           name: restaurant['name'] ?? 'Restaurant',
-                          categories: restaurant['categories'] ?? 'Food',
+                          categories: _restaurantCategoriesText(restaurant),
                           rating: (restaurant['rating'] ?? 4.7).toDouble(),
                           deliveryTime: restaurant['deliveryTime'] ?? '20 min',
                           imageUrl: restaurant['imageUrl'] ?? '',

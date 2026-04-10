@@ -29,12 +29,27 @@ class _RestaurantProfileSetupScreenState
   final TextEditingController _deliveryTimeController = TextEditingController();
   final TextEditingController _imageUrlController = TextEditingController();
 
-  final List<String> _categories = ['Burger', 'Sandwich', 'Pizza'];
-  String _selectedCategory = 'Burger';
+  final List<String> _primaryTypes = [
+    'Burger',
+    'Pizza',
+    'Sushi',
+    'Italian',
+    'Asian',
+    'Healthy',
+    'Dessert',
+    'Cafe',
+  ];
+
+  static const int _maxTotalCategories = 4;
+
+  String _selectedPrimaryType = 'Burger';
+  final List<String> _customTags = [];
 
   bool _isLoading = true;
   bool _isSaving = false;
   String? _resolvedRestaurantId;
+
+  List<String> get _allCategories => [_selectedPrimaryType, ..._customTags];
 
   @override
   void initState() {
@@ -79,18 +94,55 @@ class _RestaurantProfileSetupScreenState
             .toString();
         _imageUrlController.text = (data['imageUrl'] ?? '').toString();
 
-        final categoryValue = (data['categories'] ?? '').toString().trim();
-        if (categoryValue.isNotEmpty) {
-          final exists = _categories.any(
-            (c) => c.toLowerCase() == categoryValue.toLowerCase(),
+        final rawPrimaryType = (data['primaryType'] ?? '').toString().trim();
+        final categoriesListRaw = data['categoriesList'];
+        final categoriesStringRaw = (data['categories'] ?? '').toString();
+
+        final parsedCategories = <String>[];
+
+        if (categoriesListRaw is List) {
+          for (final item in categoriesListRaw) {
+            final value = item.toString().trim();
+            if (value.isNotEmpty) {
+              parsedCategories.add(value);
+            }
+          }
+        } else if (categoriesStringRaw.trim().isNotEmpty) {
+          final parts = categoriesStringRaw
+              .split(RegExp(r'\s*-\s*|\s*,\s*'))
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty);
+          parsedCategories.addAll(parts);
+        }
+
+        final uniqueCategories = <String>[];
+        for (final category in parsedCategories) {
+          final exists = uniqueCategories.any(
+            (c) => c.toLowerCase() == category.toLowerCase(),
           );
           if (!exists) {
-            _categories.add(categoryValue);
+            uniqueCategories.add(category);
           }
-          _selectedCategory = _categories.firstWhere(
-            (c) => c.toLowerCase() == categoryValue.toLowerCase(),
+        }
+
+        if (rawPrimaryType.isNotEmpty) {
+          _selectedPrimaryType = _findExistingOrAppendPrimaryType(
+            rawPrimaryType,
+          );
+        } else if (uniqueCategories.isNotEmpty) {
+          _selectedPrimaryType = _findExistingOrAppendPrimaryType(
+            uniqueCategories.first,
           );
         }
+
+        final remaining = uniqueCategories
+            .where((c) => c.toLowerCase() != _selectedPrimaryType.toLowerCase())
+            .take(_maxTotalCategories - 1)
+            .toList();
+
+        _customTags
+          ..clear()
+          ..addAll(remaining);
       } else {
         _deliveryTimeController.text = '20 min';
       }
@@ -107,6 +159,19 @@ class _RestaurantProfileSetupScreenState
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  String _findExistingOrAppendPrimaryType(String value) {
+    final existingIndex = _primaryTypes.indexWhere(
+      (type) => type.toLowerCase() == value.toLowerCase(),
+    );
+
+    if (existingIndex >= 0) {
+      return _primaryTypes[existingIndex];
+    }
+
+    _primaryTypes.add(value);
+    return value;
   }
 
   Future<DocumentSnapshot<Map<String, dynamic>>?> _findOwnedRestaurant() async {
@@ -132,13 +197,26 @@ class _RestaurantProfileSetupScreenState
       return;
     }
 
+    if (_allCategories.length > _maxTotalCategories) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You can have max 4 categories in total.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
       final payload = <String, dynamic>{
         'name': name,
         'description': _descriptionController.text.trim(),
-        'categories': _selectedCategory,
+        'primaryType': _selectedPrimaryType,
+        'customTags': _customTags,
+        'categoriesList': _allCategories,
+        'categories': _allCategories.join(' - '),
         'deliveryTime': _deliveryTimeController.text.trim().isEmpty
             ? '20 min'
             : _deliveryTimeController.text.trim(),
@@ -209,14 +287,24 @@ class _RestaurantProfileSetupScreenState
   }
 
   Future<void> _addCategory() async {
+    if (_allCategories.length >= _maxTotalCategories) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Maximum 4 categories allowed.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final controller = TextEditingController();
     final value = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add category'),
+        title: const Text('Add category tag'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(hintText: 'Category name'),
+          decoration: const InputDecoration(hintText: 'Tag name'),
         ),
         actions: [
           TextButton(
@@ -233,17 +321,31 @@ class _RestaurantProfileSetupScreenState
 
     if (value == null || value.isEmpty) return;
 
-    final exists = _categories.any(
+    final existsInPrimary =
+        _selectedPrimaryType.toLowerCase() == value.toLowerCase();
+    final existsInTags = _customTags.any(
       (c) => c.toLowerCase() == value.toLowerCase(),
     );
-    setState(() {
-      if (!exists) {
-        _categories.add(value);
-      }
-      _selectedCategory = _categories.firstWhere(
-        (c) => c.toLowerCase() == value.toLowerCase(),
-        orElse: () => value,
+
+    if (existsInPrimary || existsInTags) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This category already exists.'),
+          backgroundColor: Colors.red,
+        ),
       );
+      return;
+    }
+
+    setState(() {
+      _customTags.add(value);
+    });
+  }
+
+  void _removeCustomTag(String tag) {
+    setState(() {
+      _customTags.removeWhere((c) => c.toLowerCase() == tag.toLowerCase());
     });
   }
 
@@ -304,37 +406,20 @@ class _RestaurantProfileSetupScreenState
                       maxLines: 3,
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildLabel('CATEGORIES'),
-                        GestureDetector(
-                          onTap: _addCategory,
-                          child: const Text(
-                            'Add new',
-                            style: TextStyle(
-                              fontFamily: 'Sen',
-                              color: Color(0xFFFF6B35),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    _buildLabel('PRIMARY TYPE'),
                     const SizedBox(height: 12),
                     SizedBox(
                       height: 46,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
-                        itemCount: _categories.length,
+                        itemCount: _primaryTypes.length,
                         separatorBuilder: (_, __) => const SizedBox(width: 10),
                         itemBuilder: (context, index) {
-                          final category = _categories[index];
-                          final selected = category == _selectedCategory;
+                          final category = _primaryTypes[index];
+                          final selected = category == _selectedPrimaryType;
                           return GestureDetector(
                             onTap: () =>
-                                setState(() => _selectedCategory = category),
+                                setState(() => _selectedPrimaryType = category),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 20,
@@ -366,6 +451,91 @@ class _RestaurantProfileSetupScreenState
                           );
                         },
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildLabel(
+                          'CUSTOM TAGS (${_allCategories.length}/$_maxTotalCategories)',
+                        ),
+                        GestureDetector(
+                          onTap: _addCategory,
+                          child: const Text(
+                            'Add new',
+                            style: TextStyle(
+                              fontFamily: 'Sen',
+                              color: Color(0xFFFF6B35),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF8A1E),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Text(
+                            _selectedPrimaryType,
+                            style: const TextStyle(
+                              fontFamily: 'Sen',
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        ..._customTags.map(
+                          (tag) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF2F4F7),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: const Color(0xFFD8DAE1),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  tag,
+                                  style: const TextStyle(
+                                    fontFamily: 'Sen',
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 14,
+                                    color: Color(0xFF2E3243),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () => _removeCustomTag(tag),
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     _buildLabel('PREPARATION TIME'),
