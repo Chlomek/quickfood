@@ -10,23 +10,25 @@ import 'features/shared/services/authWrapper.dart';
 
 // Your Logic/Providers
 import 'features/shared/services/cartProvider.dart';
+import 'features/shared/services/fcm_push_notification_service.dart';
 import 'features/shared/services/order_provider.dart'; // NEW
 import 'features/shared/services/order_status_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FcmPushNotificationService.instance.initialize();
   await OrderStatusNotificationService.instance.initialize();
-  
+
   runApp(
     // Wrap the entire app so all screens can access data
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => LoginProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
-        ChangeNotifierProvider(create: (_) => OrderProvider()..loadOrders()), // NEW - Load orders on app start
+        ChangeNotifierProvider(
+          create: (_) => OrderProvider()..loadOrders(),
+        ), // NEW - Load orders on app start
       ],
       child: const MainApp(),
     ),
@@ -42,9 +44,7 @@ class MainApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
       home: const AuthWrapper(),
-      routes: {
-        '/login': (context) => const LoginScreen(),
-      },
+      routes: {'/login': (context) => const LoginScreen()},
     );
   }
 }
