@@ -12,7 +12,20 @@
           "package_name": "com.example.quickfood"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "48032303630-muvi1roehmo3l5nrredbh1uj49j2ecn1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.quickfood",
+            "certificate_hash": "0dd1d11a86b90a6867388ce0036462a3e17423f2"
+          }
+        },
+        {
+          "client_id": "48032303630-rv82au8mk5mheu3esqqa3ui7l03po031.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDwh7CbMi5B3PWI4mAHcsk4_Digu8oITK4"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "48032303630-rv82au8mk5mheu3esqqa3ui7l03po031.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "48032303630-v3hqatbr74nmean5bbsk214jon1e9grq.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.quickfood"
+              }
+            }
+          ]
         }
       }
     }

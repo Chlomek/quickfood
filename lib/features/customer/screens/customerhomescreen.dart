@@ -20,7 +20,6 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   String selectedCategory = 'All';
   String searchQuery = '';
-  
 
   static const double _expandedHeight = 205.0;
 
@@ -48,10 +47,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   bool _filterRestaurant(Map<String, dynamic> restaurant) {
+    final isOpen = restaurant['isOpen'] == true;
+    if (!isOpen) return false;
+
     if (searchQuery.isNotEmpty) {
       final name = (restaurant['name'] ?? '').toLowerCase();
       final cats = (restaurant['categories'] ?? '').toLowerCase();
-      if (!name.contains(searchQuery) && !cats.contains(searchQuery)) return false;
+      if (!name.contains(searchQuery) && !cats.contains(searchQuery))
+        return false;
     }
     if (selectedCategory != 'All') {
       final cats = (restaurant['categories'] ?? '').toLowerCase();
@@ -69,35 +72,22 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     );
   }
 
-
   void _clearSearch() {
     _searchController.clear();
     setState(() => searchQuery = '');
   }
 
-  Widget _buildSectionHeader(String title, VoidCallback onSeeAll) {
+  Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title,
-              style: TextStyle(
-                  fontFamily: 'Sen',
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87)),
-          GestureDetector(
-            onTap: onSeeAll,
-            child: Row(
-              children: [
-                Text('See All',
-                    style: TextStyle(fontFamily: 'Sen', fontSize: 14, color: Colors.black54)),
-                Icon(Icons.chevron_right, color: Colors.black54, size: 20),
-              ],
-            ),
-          ),
-        ],
+      child: Text(
+        title,
+        style: TextStyle(
+          fontFamily: 'Sen',
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
       ),
     );
   }
@@ -113,7 +103,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           stream: _firestore.collection('restaurants').snapshots(),
           builder: (context, snapshot) {
             List<QueryDocumentSnapshot> filteredDocs = [];
-            final isLoading = snapshot.connectionState == ConnectionState.waiting;
+            final isLoading =
+                snapshot.connectionState == ConnectionState.waiting;
             final hasError = snapshot.hasError;
 
             if (snapshot.hasData) {
@@ -143,7 +134,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             color: Color(0xFFF5F5F5),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.menu, color: Colors.black87, size: 20),
+                          child: Icon(
+                            Icons.menu,
+                            color: Colors.black87,
+                            size: 20,
+                          ),
                         ),
                       ),
                       AnimatedBuilder(
@@ -151,7 +146,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         builder: (context, child) {
                           double opacity = 0.0;
                           if (_scrollController.hasClients) {
-                            opacity = (_scrollController.offset / _expandedHeight).clamp(0.0, 1.0);
+                            opacity =
+                                (_scrollController.offset / _expandedHeight)
+                                    .clamp(0.0, 1.0);
                           }
                           return Opacity(opacity: opacity, child: child);
                         },
@@ -166,7 +163,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         ),
                       ),
                       // 5. REPLACED OLD STACK WITH NEW WIDGET
-                      const CartBadgeIcon(), 
+                      const CartBadgeIcon(),
                     ],
                   ),
                   automaticallyImplyLeading: false,
@@ -181,8 +178,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         builder: (context, child) {
                           double opacity = 1.0;
                           if (_scrollController.hasClients) {
-                            opacity = (1.0 - (_scrollController.offset / (_expandedHeight * 0.6)))
-                                .clamp(0.0, 1.0);
+                            opacity =
+                                (1.0 -
+                                        (_scrollController.offset /
+                                            (_expandedHeight * 0.6)))
+                                    .clamp(0.0, 1.0);
                           }
                           return Opacity(opacity: opacity, child: child);
                         },
@@ -204,7 +204,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               Text(
                                 'Hi, ${user!.displayName}!',
                                 style: TextStyle(
-                                    fontFamily: 'Sen', fontSize: 15, color: Colors.grey),
+                                  fontFamily: 'Sen',
+                                  fontSize: 15,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ],
                             SizedBox(height: 14),
@@ -223,7 +226,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.only(top: 24),
-                    child: _buildSectionHeader('All Categories', () {}),
+                    child: _buildSectionHeader('All Categories'),
                   ),
                 ),
                 SliverToBoxAdapter(child: SizedBox(height: 16)),
@@ -237,12 +240,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 ),
                 SliverToBoxAdapter(child: SizedBox(height: 24)),
                 SliverToBoxAdapter(
-                  child: _buildSectionHeader('Open Restaurants', () {}),
+                  child: _buildSectionHeader('Open Restaurants'),
                 ),
                 SliverToBoxAdapter(child: SizedBox(height: 16)),
                 if (isLoading)
                   SliverFillRemaining(
-                    child: Center(child: CircularProgressIndicator(color: Colors.orange)),
+                    child: Center(
+                      child: CircularProgressIndicator(color: Colors.orange),
+                    ),
                   )
                 else if (hasError)
                   SliverFillRemaining(
@@ -256,9 +261,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         children: [
                           Icon(Icons.restaurant, size: 64, color: Colors.grey),
                           SizedBox(height: 16),
-                          Text('No restaurants available',
-                              style: TextStyle(
-                                  fontFamily: 'Sen', fontSize: 16, color: Colors.grey)),
+                          Text(
+                            'No restaurants available',
+                            style: TextStyle(
+                              fontFamily: 'Sen',
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -271,19 +281,25 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         children: [
                           Icon(Icons.search_off, size: 64, color: Colors.grey),
                           SizedBox(height: 16),
-                          Text('No restaurants found',
-                              style: TextStyle(
-                                  fontFamily: 'Sen',
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87)),
+                          Text(
+                            'No restaurants found',
+                            style: TextStyle(
+                              fontFamily: 'Sen',
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
                           SizedBox(height: 8),
                           Text(
                             searchQuery.isNotEmpty
                                 ? 'Try a different search term'
                                 : 'Try selecting a different category',
-                            style:
-                                TextStyle(fontFamily: 'Sen', fontSize: 14, color: Colors.grey),
+                            style: TextStyle(
+                              fontFamily: 'Sen',
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
@@ -293,22 +309,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   SliverPadding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final doc = filteredDocs[index];
-                          final restaurant = doc.data() as Map<String, dynamic>;
-                          return RestaurantCard(
-                            restaurantId: doc.id,
-                            name: restaurant['name'] ?? 'Restaurant',
-                            categories: restaurant['categories'] ?? 'Food',
-                            rating: (restaurant['rating'] ?? 4.7).toDouble(),
-                            deliveryTime: restaurant['deliveryTime'] ?? '20 min',
-                            imageUrl: restaurant['imageUrl'] ?? '',
-                            description: restaurant['description'] ?? '',
-                          );
-                        },
-                        childCount: filteredDocs.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final doc = filteredDocs[index];
+                        final restaurant = doc.data() as Map<String, dynamic>;
+                        return RestaurantCard(
+                          restaurantId: doc.id,
+                          name: restaurant['name'] ?? 'Restaurant',
+                          categories: restaurant['categories'] ?? 'Food',
+                          rating: (restaurant['rating'] ?? 4.7).toDouble(),
+                          deliveryTime: restaurant['deliveryTime'] ?? '20 min',
+                          imageUrl: restaurant['imageUrl'] ?? '',
+                          description: restaurant['description'] ?? '',
+                        );
+                      }, childCount: filteredDocs.length),
                     ),
                   ),
                 SliverToBoxAdapter(child: SizedBox(height: 20)),

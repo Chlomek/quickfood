@@ -5,6 +5,9 @@ import '../../shared/services/order_service.dart';
 import '../../shared/services/order_model.dart';
 import 'addnewitemscreen.dart';
 import 'restaurantmenu.dart';
+import 'restaurantordersscreen.dart';
+import 'restaurantprofilesetupscreen.dart';
+import '../../shared/screens/profilesettingsscreen.dart';
 import '../widgets/restaurant_drawer_menu.dart';
 import '../widgets/restaurant_bottom_navbar.dart';
 
@@ -128,11 +131,15 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
             _buildHeader(),
             Expanded(
               child: StreamBuilder<List<Order>>(
-                stream: _orderService.watchRestaurantOrders(widget.restaurantId),
+                stream: _orderService.watchRestaurantOrders(
+                  widget.restaurantId,
+                ),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                      child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFFF6B35),
+                      ),
                     );
                   }
 
@@ -151,10 +158,12 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
 
                   final orders = snapshot.data ?? [];
                   final activeOrders = orders
-                      .where((o) =>
-                          o.status == OrderStatus.restaurantConfirmed ||
-                          o.status == OrderStatus.preparing ||
-                          o.status == OrderStatus.ready)
+                      .where(
+                        (o) =>
+                            o.status == OrderStatus.restaurantConfirmed ||
+                            o.status == OrderStatus.preparing ||
+                            o.status == OrderStatus.ready,
+                      )
                       .toList();
                   final pendingOrders = orders
                       .where((o) => o.status == OrderStatus.pending)
@@ -166,7 +175,10 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // ── Stats row ──
-                        _buildStatsRow(activeOrders.length, pendingOrders.length),
+                        _buildStatsRow(
+                          activeOrders.length,
+                          pendingOrders.length,
+                        ),
                         const SizedBox(height: 28),
 
                         // ── Running orders ──
@@ -249,8 +261,11 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
                       ),
                     ),
                     SizedBox(width: 4),
-                    Icon(Icons.keyboard_arrow_down,
-                        size: 18, color: Color(0xFF1A1A2E)),
+                    Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 18,
+                      color: Color(0xFF1A1A2E),
+                    ),
                   ],
                 ),
               ],
@@ -272,9 +287,7 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
                         : const Color(0xFFBDBDBD),
                     boxShadow: [
                       BoxShadow(
-                        color: (_isOpen
-                                ? const Color(0xFF4CAF50)
-                                : Colors.grey)
+                        color: (_isOpen ? const Color(0xFF4CAF50) : Colors.grey)
                             .withOpacity(0.35),
                         blurRadius: 10,
                         offset: const Offset(0, 3),
@@ -290,7 +303,9 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
                           ),
                         )
                       : Icon(
-                          _isOpen ? Icons.storefront : Icons.store_mall_directory_outlined,
+                          _isOpen
+                              ? Icons.storefront
+                              : Icons.store_mall_directory_outlined,
                           size: 20,
                           color: Colors.white,
                         ),
@@ -432,7 +447,8 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
               color: const Color(0xFFEEF0F5),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: order.items.isNotEmpty && order.items.first.imageUrl.isNotEmpty
+            child:
+                order.items.isNotEmpty && order.items.first.imageUrl.isNotEmpty
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(14),
                     child: Image.network(
@@ -440,7 +456,11 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
                       fit: BoxFit.cover,
                     ),
                   )
-                : const Icon(Icons.fastfood, color: Color(0xFFBDBDBD), size: 32),
+                : const Icon(
+                    Icons.fastfood,
+                    color: Color(0xFFBDBDBD),
+                    size: 32,
+                  ),
           ),
           const SizedBox(width: 18),
 
@@ -451,86 +471,75 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                // Category tag
-                Text(
-                  '#${order.items.isNotEmpty ? order.items.first.name.split(" ").first : "Order"}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFFFF6B35),
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Sen',
-                  ),
-                ),
-                const SizedBox(height: 2),
-                // Item names
-                if (showAllItems && order.items.isNotEmpty)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: order.items
-                        .map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 2),
-                            child: Text(
-                              '${item.quantity}x ${item.name}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF1A1A2E),
-                                fontFamily: 'Sen',
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  )
-                else
+                  // Category tag
                   Text(
-                    order.items.length == 1
-                        ? order.items.first.name
-                        : '${order.items.first.name} +${order.items.length - 1}',
+                    '#${order.items.isNotEmpty ? order.items.first.name.split(" ").first : "Order"}',
                     style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
+                      fontSize: 12,
+                      color: Color(0xFFFF6B35),
+                      fontWeight: FontWeight.w600,
                       fontFamily: 'Sen',
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                const SizedBox(height: 2),
-                Text(
-                  'ID: ${order.id.substring(0, 6).toUpperCase()}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF9E9E9E),
-                    fontFamily: 'Sen',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Price + action buttons (responsive to avoid right overflow)
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final actionButtons = _buildRunningActionButtons(context, order);
-                    final compact = constraints.maxWidth < 230;
-
-                    if (actionButtons.isEmpty) {
-                      return Text(
-                        '${order.total} Kč',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A2E),
-                          fontFamily: 'Sen',
-                        ),
-                      );
-                    }
-
-                    return Column(
+                  const SizedBox(height: 2),
+                  // Item names
+                  if (showAllItems && order.items.isNotEmpty)
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                      children: order.items
+                          .map(
+                            (item) => Padding(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: Text(
+                                '${item.quantity}x ${item.name}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1A1A2E),
+                                  fontFamily: 'Sen',
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    )
+                  else
+                    Text(
+                      order.items.length == 1
+                          ? order.items.first.name
+                          : '${order.items.first.name} +${order.items.length - 1}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A1A2E),
+                        fontFamily: 'Sen',
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'ID: ${order.id.substring(0, 6).toUpperCase()}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF9E9E9E),
+                      fontFamily: 'Sen',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Price + action buttons (responsive to avoid right overflow)
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final actionButtons = _buildRunningActionButtons(
+                        context,
+                        order,
+                      );
+                      final compact = constraints.maxWidth < 230;
+
+                      if (actionButtons.isEmpty) {
+                        return Text(
                           '${order.total} Kč',
                           style: const TextStyle(
                             fontSize: 15,
@@ -538,21 +547,35 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
                             color: Color(0xFF1A1A2E),
                             fontFamily: 'Sen',
                           ),
-                        ),
-                        SizedBox(height: compact ? 8 : 6),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            alignment: WrapAlignment.end,
-                            children: actionButtons,
+                        );
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${order.total} Kč',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF1A1A2E),
+                              fontFamily: 'Sen',
+                            ),
                           ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                          SizedBox(height: compact ? 8 : 6),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              alignment: WrapAlignment.end,
+                              children: actionButtons,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -573,20 +596,20 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
             isUpdating
                 ? null
                 : () => _updateOrderStatus(
-                      context,
-                      order.id,
-                      OrderStatus.preparing,
-                    ),
+                    context,
+                    order.id,
+                    OrderStatus.preparing,
+                  ),
           ),
           _outlineBtn(
             isUpdating ? '...' : 'Cancel',
             isUpdating
                 ? null
                 : () => _updateOrderStatus(
-                      context,
-                      order.id,
-                      OrderStatus.cancelled,
-                    ),
+                    context,
+                    order.id,
+                    OrderStatus.cancelled,
+                  ),
             color: Colors.red,
           ),
         ];
@@ -596,11 +619,8 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
             isUpdating ? '...' : 'Ready',
             isUpdating
                 ? null
-                : () => _updateOrderStatus(
-                      context,
-                      order.id,
-                      OrderStatus.ready,
-                    ),
+                : () =>
+                      _updateOrderStatus(context, order.id, OrderStatus.ready),
             color: const Color(0xFFFF6B35),
           ),
           _outlineBtn(
@@ -608,10 +628,10 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
             isUpdating
                 ? null
                 : () => _updateOrderStatus(
-                      context,
-                      order.id,
-                      OrderStatus.cancelled,
-                    ),
+                    context,
+                    order.id,
+                    OrderStatus.cancelled,
+                  ),
             color: Colors.red,
           ),
         ];
@@ -622,10 +642,10 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
             isUpdating
                 ? null
                 : () => _updateOrderStatus(
-                      context,
-                      order.id,
-                      OrderStatus.completed,
-                    ),
+                    context,
+                    order.id,
+                    OrderStatus.completed,
+                  ),
           ),
         ];
       default:
@@ -665,7 +685,9 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 7),
         decoration: BoxDecoration(
-          color: onTap == null ? const Color(0xFFBDBDBD) : const Color(0xFF4CAF50),
+          color: onTap == null
+              ? const Color(0xFFBDBDBD)
+              : const Color(0xFF4CAF50),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Text(
@@ -727,75 +749,84 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: Column(
-              children: order.items.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEEF0F5),
-                        borderRadius: BorderRadius.circular(12),
-                        image: item.imageUrl.isNotEmpty
-                            ? DecorationImage(
-                                image: NetworkImage(item.imageUrl),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                      ),
-                      child: item.imageUrl.isEmpty
-                          ? const Icon(Icons.fastfood,
-                              color: Color(0xFFBDBDBD), size: 28)
-                          : null,
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              children: order.items
+                  .map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
                         children: [
-                          Text(
-                            item.name,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF1A1A2E),
-                              fontFamily: 'Sen',
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEEF0F5),
+                              borderRadius: BorderRadius.circular(12),
+                              image: item.imageUrl.isNotEmpty
+                                  ? DecorationImage(
+                                      image: NetworkImage(item.imageUrl),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child: item.imageUrl.isEmpty
+                                ? const Icon(
+                                    Icons.fastfood,
+                                    color: Color(0xFFBDBDBD),
+                                    size: 28,
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.name,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1A1A2E),
+                                    fontFamily: 'Sen',
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${item.price} Kč',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1A1A2E),
+                                    fontFamily: 'Sen',
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${item.price} Kč',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF1A1A2E),
-                              fontFamily: 'Sen',
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEEF0F5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${item.quantity}x',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1A1A2E),
+                                fontFamily: 'Sen',
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEEF0F5),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${item.quantity}x',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A2E),
-                          fontFamily: 'Sen',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )).toList(),
+                  )
+                  .toList(),
             ),
           ),
 
@@ -843,10 +874,10 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
                     onTap: _updatingOrderIds.contains(order.id)
                         ? null
                         : () => _updateOrderStatus(
-                              context,
-                              order.id,
-                              OrderStatus.cancelled,
-                            ),
+                            context,
+                            order.id,
+                            OrderStatus.cancelled,
+                          ),
                     child: Column(
                       children: [
                         Container(
@@ -856,8 +887,11 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
                             color: Color(0xFFFFEBEE),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.close,
-                              color: Colors.red, size: 26),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.red,
+                            size: 26,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         const Text(
@@ -880,10 +914,10 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
                     onTap: _updatingOrderIds.contains(order.id)
                         ? null
                         : () => _updateOrderStatus(
-                              context,
-                              order.id,
-                              OrderStatus.restaurantConfirmed,
-                            ),
+                            context,
+                            order.id,
+                            OrderStatus.restaurantConfirmed,
+                          ),
                     child: Column(
                       children: [
                         Container(
@@ -893,8 +927,11 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
                             color: Color(0xFFE8F5E9),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.check,
-                              color: Color(0xFF4CAF50), size: 26),
+                          child: const Icon(
+                            Icons.check,
+                            color: Color(0xFF4CAF50),
+                            size: 26,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         const Text(
@@ -928,9 +965,7 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
         final added = await Navigator.push<bool>(
           context,
           MaterialPageRoute(
-            builder: (_) => AddNewItemScreen(
-              restaurantId: widget.restaurantId,
-            ),
+            builder: (_) => AddNewItemScreen(restaurantId: widget.restaurantId),
           ),
         );
 
@@ -948,9 +983,8 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => RestaurantMenuScreen(
-              restaurantId: widget.restaurantId,
-            ),
+            builder: (_) =>
+                RestaurantMenuScreen(restaurantId: widget.restaurantId),
           ),
         );
       },
@@ -973,11 +1007,36 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
             Navigator.pop(sheetContext);
             await _toggleOpen();
           },
-          onOrderRequestsTap: () {
+          onOrderHistoryTap: () {
             Navigator.pop(sheetContext);
-            setState(() => _selectedNavIndex = 0);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    RestaurantOrdersScreen(restaurantId: widget.restaurantId),
+              ),
+            );
           },
-          onSettingsTap: () => Navigator.pop(sheetContext),
+          onRestaurantProfileTap: () {
+            Navigator.pop(sheetContext);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RestaurantProfileSetupScreen(
+                  userId: _auth.currentUser!.uid,
+                  restaurantId: widget.restaurantId,
+                  navigateToHomeOnSave: false,
+                ),
+              ),
+            );
+          },
+          onSettingsTap: () {
+            Navigator.pop(sheetContext);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileSettingsScreen()),
+            );
+          },
           onLogoutTap: () async {
             final shouldLogout = await showDialog<bool>(
               context: context,
@@ -1004,10 +1063,9 @@ class _RestaurantHomeScreenState extends State<RestaurantHomeScreen> {
               Navigator.pop(sheetContext);
               await _auth.signOut();
               if (mounted) {
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  '/login',
-                  (route) => false,
-                );
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil('/login', (route) => false);
               }
             }
           },

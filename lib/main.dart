@@ -11,12 +11,14 @@ import 'features/shared/services/authWrapper.dart';
 // Your Logic/Providers
 import 'features/shared/services/cartProvider.dart';
 import 'features/shared/services/order_provider.dart'; // NEW
+import 'features/shared/services/order_status_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await OrderStatusNotificationService.instance.initialize();
   
   runApp(
     // Wrap the entire app so all screens can access data

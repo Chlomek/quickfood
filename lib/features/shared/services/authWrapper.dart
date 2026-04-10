@@ -4,12 +4,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../screens/loginscreen.dart';
 import '../../customer/screens/customerhomescreen.dart';
 import '../../restaurant/screens/restauranthomescreen.dart';
+import '../../restaurant/screens/restaurantprofilesetupscreen.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   Future<String?> _resolveRestaurantId(
-      FirebaseFirestore firestore, String uid, Map<String, dynamic>? userData) async {
+    FirebaseFirestore firestore,
+    String uid,
+    Map<String, dynamic>? userData,
+  ) async {
     final directId = userData?['restaurantId'];
     if (directId is String && directId.isNotEmpty) return directId;
 
@@ -39,7 +43,9 @@ class AuthWrapper extends StatelessWidget {
       builder: (context, authSnapshot) {
         // 1. Check if Firebase is still determining the Auth state
         if (authSnapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
         // 2. If user is logged in, check their role in Firestore
@@ -51,14 +57,16 @@ class AuthWrapper extends StatelessWidget {
                 .get(),
             builder: (context, userSnapshot) {
               if (userSnapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
               }
 
               // Extract role (Assuming you have a 'role' field in your user doc)
-              final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
+              final userData =
+                  userSnapshot.data?.data() as Map<String, dynamic>?;
               final String role = userData?['role'] ?? 'customer';
 
-              
               if (role == 'restaurant') {
                 return FutureBuilder<String?>(
                   future: _resolveRestaurantId(
@@ -67,7 +75,8 @@ class AuthWrapper extends StatelessWidget {
                     userData,
                   ),
                   builder: (context, restaurantSnapshot) {
-                    if (restaurantSnapshot.connectionState == ConnectionState.waiting) {
+                    if (restaurantSnapshot.connectionState ==
+                        ConnectionState.waiting) {
                       return const Scaffold(
                         body: Center(child: CircularProgressIndicator()),
                       );
@@ -75,7 +84,9 @@ class AuthWrapper extends StatelessWidget {
 
                     final restaurantId = restaurantSnapshot.data;
                     if (restaurantId == null) {
-                      return const LoginScreen();
+                      return RestaurantProfileSetupScreen(
+                        userId: authSnapshot.data!.uid,
+                      );
                     }
 
                     return RestaurantHomeScreen(restaurantId: restaurantId);

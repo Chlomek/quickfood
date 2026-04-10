@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'registerscreen.dart';
 import '../services/navigation_service.dart';
 import '../../customer/screens/customerhomescreen.dart';
 import '../../restaurant/screens/restauranthomescreen.dart';
+import '../../restaurant/screens/restaurantprofilesetupscreen.dart';
 
 //TO DO: add Google sign in functionality and error handling for login failures
 
@@ -16,7 +18,7 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => LoginProvider(),
-      child: Consumer<LoginProvider>( 
+      child: Consumer<LoginProvider>(
         builder: (context, loginProvider, child) {
           return Scaffold(
             body: Center(
@@ -66,7 +68,8 @@ class LoginScreen extends StatelessWidget {
                           SizedBox(height: 8),
                           TextField(
                             obscureText: !loginProvider.showPassword,
-                            onChanged: (value) => loginProvider.password = value,
+                            onChanged: (value) =>
+                                loginProvider.password = value,
                             style: Theme.of(context).textTheme.bodyMedium,
                             decoration: InputDecoration(
                               hintText: '• • • • • • • • • •',
@@ -77,52 +80,28 @@ class LoginScreen extends StatelessWidget {
                                       : Icons.visibility_off_outlined,
                                   color: Colors.grey,
                                 ),
-                                onPressed: () => loginProvider.togglePasswordVisibility(),
+                                onPressed: () =>
+                                    loginProvider.togglePasswordVisibility(),
                               ),
                             ),
                           ),
                           SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: Checkbox(
-                                      value: loginProvider.rememberMe,
-                                      onChanged: (value) => loginProvider.toggleRememberMe(),
-                                      activeColor: Colors.orange,
-                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Remember me',
-                                    style: TextStyle(
-                                      fontFamily: 'Sen',
-                                      fontSize: 14,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              GestureDetector(
-                                onTap: () => loginProvider.goToForgotPasswordScreen(context),
-                                child: Text(
-                                  'Forgot Password',
-                                  style: TextStyle(
-                                    fontFamily: 'Sen',
-                                    fontSize: 14,
-                                    color: Colors.orange,
-                                  ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: GestureDetector(
+                              onTap: () => loginProvider
+                                  .goToForgotPasswordScreen(context),
+                              child: Text(
+                                'Forgot Password',
+                                style: TextStyle(
+                                  fontFamily: 'Sen',
+                                  fontSize: 14,
+                                  color: Colors.orange,
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                          
+
                           // Show error message if exists
                           if (loginProvider.errorMessage.isNotEmpty)
                             Padding(
@@ -136,7 +115,7 @@ class LoginScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          
+
                           SizedBox(height: 24),
                           ElevatedButton(
                             onPressed: loginProvider.isLoading
@@ -155,7 +134,9 @@ class LoginScreen extends StatelessWidget {
                                   )
                                 : Text(
                                     'LOG IN',
-                                    style: Theme.of(context).textTheme.labelLarge,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.labelLarge,
                                   ),
                           ),
                           SizedBox(height: 16),
@@ -215,9 +196,11 @@ class LoginScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: ElevatedButton(
-                              onPressed: () {
-                                // Handle Google sign in
-                              },
+                              onPressed: loginProvider.isLoading
+                                  ? null
+                                  : () async {
+                                      await loginProvider.googleLogin(context);
+                                    },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Color(0xFFF5F5F5),
                                 elevation: 0,
@@ -268,18 +251,16 @@ class LoginScreen extends StatelessWidget {
 class LoginProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  static const String _googleServerClientId =
+      '48032303630-rv82au8mk5mheu3esqqa3ui7l03po031.apps.googleusercontent.com';
+  bool _googleInitialized = false;
 
   String email = '';
   String password = '';
-  bool rememberMe = false;
   bool showPassword = false;
   bool isLoading = false;
   String errorMessage = '';
-
-  void toggleRememberMe() {
-    rememberMe = !rememberMe;
-    notifyListeners();
-  }
 
   void togglePasswordVisibility() {
     showPassword = !showPassword;
@@ -315,13 +296,16 @@ class LoginProvider extends ChangeNotifier {
   // Get user role from Firestore
   Future<String> _getUserRole(String uid) async {
     try {
-      DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
-      
+      DocumentSnapshot userDoc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get();
+
       if (userDoc.exists) {
         // Get role from Firestore, default to 'customer' if not set
         return userDoc.get('role') ?? 'customer';
       }
-      
+
       // If user document doesn't exist, return default role
       return 'customer';
     } catch (e) {
@@ -399,13 +383,12 @@ class LoginProvider extends ChangeNotifier {
       if (userRole == 'restaurant') {
         final restaurantId = await _getRestaurantId(userCredential.user!.uid);
         if (restaurantId == null) {
-          errorMessage = 'No restaurant profile found for this account';
-          notifyListeners();
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(errorMessage),
-              backgroundColor: Colors.red,
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RestaurantProfileSetupScreen(
+                userId: userCredential.user!.uid,
+              ),
             ),
           );
           return;
@@ -415,22 +398,90 @@ class LoginProvider extends ChangeNotifier {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => RestaurantHomeScreen(
-              restaurantId: restaurantId,
-            ),
+            builder: (context) =>
+                RestaurantHomeScreen(restaurantId: restaurantId),
           ),
         );
       } else {
         // Navigate to customer home screen (default)
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => CustomerHomeScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => CustomerHomeScreen()),
         );
       }
-
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        try {
+          final newUserCredential = await _auth.createUserWithEmailAndPassword(
+            email: email.trim(),
+            password: password,
+          );
+
+          final user = newUserCredential.user;
+          if (user == null) {
+            throw Exception('Account creation failed');
+          }
+
+          final fallbackName = _nameFromEmail(email.trim());
+          await user.updateDisplayName(fallbackName);
+
+          await _firestore.collection('users').doc(user.uid).set({
+            'name': user.displayName ?? fallbackName,
+            'email': user.email ?? email.trim(),
+            'role': 'customer',
+            'createdAt': FieldValue.serverTimestamp(),
+            'uid': user.uid,
+          }, SetOptions(merge: true));
+
+          isLoading = false;
+          notifyListeners();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No account found. New account created!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => CustomerHomeScreen()),
+          );
+          return;
+        } on FirebaseAuthException catch (createError) {
+          isLoading = false;
+
+          switch (createError.code) {
+            case 'weak-password':
+              errorMessage = 'Password is too weak for a new account';
+              break;
+            case 'email-already-in-use':
+              errorMessage =
+                  'This email was just registered. Please try logging in again';
+              break;
+            default:
+              errorMessage = 'Account creation failed: ${createError.message}';
+          }
+
+          notifyListeners();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+          );
+          return;
+        } catch (createError) {
+          isLoading = false;
+          errorMessage = 'Could not create account. Please try again.';
+          notifyListeners();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+          );
+          return;
+        }
+      }
+
       isLoading = false;
 
       // Handle specific Firebase Auth errors
@@ -457,26 +508,208 @@ class LoginProvider extends ChangeNotifier {
       notifyListeners();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
       );
-
     } catch (e) {
       isLoading = false;
       errorMessage = 'An error occurred. Please try again.';
       notifyListeners();
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
       );
 
       print('Error during login: $e');
     }
+  }
+
+  String _nameFromEmail(String value) {
+    final local = value.split('@').first.trim();
+    if (local.isEmpty) return 'User';
+
+    final cleaned = local.replaceAll(RegExp(r'[^a-zA-Z0-9]'), ' ').trim();
+    if (cleaned.isEmpty) return 'User';
+
+    return cleaned
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
+  }
+
+  Future<void> googleLogin(BuildContext context) async {
+    isLoading = true;
+    errorMessage = '';
+    notifyListeners();
+
+    try {
+      await _ensureGoogleInitialized();
+
+      final googleUser = await _googleSignIn.authenticate();
+
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        isLoading = false;
+        errorMessage =
+            'Google sign-in configuration is incomplete (missing ID token).';
+        notifyListeners();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+        );
+        return;
+      }
+
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user;
+
+      if (user == null) {
+        throw Exception('Google sign-in failed');
+      }
+
+      final userRef = _firestore.collection('users').doc(user.uid);
+      final userDoc = await userRef.get();
+
+      if (!userDoc.exists) {
+        await userRef.set({
+          'name': user.displayName ?? 'User',
+          'email': user.email ?? '',
+          'role': 'customer',
+          'createdAt': FieldValue.serverTimestamp(),
+          'uid': user.uid,
+        });
+      } else {
+        await userRef.set({
+          'name': user.displayName ?? (userDoc.data()?['name'] ?? 'User'),
+          'email': user.email ?? (userDoc.data()?['email'] ?? ''),
+          'uid': user.uid,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      final userRole = await _getUserRole(user.uid);
+
+      isLoading = false;
+      notifyListeners();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Google login successful!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      if (userRole == 'restaurant') {
+        final restaurantId = await _getRestaurantId(user.uid);
+        if (restaurantId == null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RestaurantProfileSetupScreen(userId: user.uid),
+            ),
+          );
+          return;
+        }
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                RestaurantHomeScreen(restaurantId: restaurantId),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => CustomerHomeScreen()),
+        );
+      }
+    } on GoogleSignInException catch (e) {
+      isLoading = false;
+
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        // User dismissed account picker; treat as a normal cancellation.
+        notifyListeners();
+        return;
+      }
+
+      switch (e.code) {
+        case GoogleSignInExceptionCode.clientConfigurationError:
+          errorMessage =
+              'Google Sign-In is not configured correctly for this app (${e.description ?? 'client configuration error'}).';
+          break;
+        case GoogleSignInExceptionCode.providerConfigurationError:
+          errorMessage =
+              'Google provider configuration error (${e.description ?? 'provider configuration error'}).';
+          break;
+        case GoogleSignInExceptionCode.interrupted:
+        case GoogleSignInExceptionCode.uiUnavailable:
+          errorMessage = 'Google sign-in was interrupted. Please try again.';
+          break;
+        default:
+          errorMessage =
+              'Google sign-in failed (${e.code.name}). ${e.description ?? ''}'
+                  .trim();
+      }
+      notifyListeners();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+      );
+    } on FirebaseAuthException catch (e) {
+      isLoading = false;
+
+      switch (e.code) {
+        case 'account-exists-with-different-credential':
+          errorMessage =
+              'An account already exists with a different sign-in method';
+          break;
+        case 'invalid-credential':
+          errorMessage =
+              'Google credential rejected. Check Firebase Auth Google provider, SHA-1/SHA-256 fingerprints, and app package setup.';
+          break;
+        case 'missing-id-token':
+          errorMessage =
+              'Google did not return an ID token. Verify Google Sign-In OAuth client configuration.';
+          break;
+        default:
+          errorMessage = 'Google login failed: ${e.message}';
+      }
+
+      notifyListeners();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+      );
+    } catch (e) {
+      isLoading = false;
+      errorMessage = 'Google login failed. Please try again.';
+      notifyListeners();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+      );
+
+      print('Error during Google login: $e');
+    }
+  }
+
+  Future<void> _ensureGoogleInitialized() async {
+    if (_googleInitialized) return;
+    if (_googleServerClientId.isEmpty) {
+      throw const GoogleSignInException(
+        code: GoogleSignInExceptionCode.clientConfigurationError,
+        description:
+            'serverClientId must be provided on android. Set _googleServerClientId in LoginProvider.',
+      );
+    }
+
+    await _googleSignIn.initialize(serverClientId: _googleServerClientId);
+    _googleInitialized = true;
   }
 
   void goToForgotPasswordScreen(BuildContext context) {

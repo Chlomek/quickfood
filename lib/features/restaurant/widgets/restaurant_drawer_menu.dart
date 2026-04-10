@@ -6,7 +6,8 @@ class RestaurantDrawerMenu extends StatelessWidget {
   final bool isOpen;
   final VoidCallback onDashboardTap;
   final VoidCallback onToggleOpenTap;
-  final VoidCallback onOrderRequestsTap;
+  final VoidCallback onRestaurantProfileTap;
+  final VoidCallback onOrderHistoryTap;
   final VoidCallback onSettingsTap;
   final VoidCallback onLogoutTap;
 
@@ -16,7 +17,8 @@ class RestaurantDrawerMenu extends StatelessWidget {
     required this.isOpen,
     required this.onDashboardTap,
     required this.onToggleOpenTap,
-    required this.onOrderRequestsTap,
+    required this.onRestaurantProfileTap,
+    required this.onOrderHistoryTap,
     required this.onSettingsTap,
     required this.onLogoutTap,
   });
@@ -97,15 +99,24 @@ class RestaurantDrawerMenu extends StatelessWidget {
                   onTap: onDashboardTap,
                 ),
                 _buildDrawerItem(
-                  icon: isOpen ? Icons.storefront : Icons.store_mall_directory_outlined,
-                  title: isOpen ? 'Set Restaurant Closed' : 'Set Restaurant Open',
+                  icon: isOpen
+                      ? Icons.storefront
+                      : Icons.store_mall_directory_outlined,
+                  title: isOpen
+                      ? 'Set Restaurant Closed'
+                      : 'Set Restaurant Open',
                   iconColor: isOpen ? Colors.green : Colors.orange,
                   onTap: onToggleOpenTap,
                 ),
                 _buildDrawerItem(
-                  icon: Icons.receipt_long_outlined,
-                  title: 'Order Requests',
-                  onTap: onOrderRequestsTap,
+                  icon: Icons.history,
+                  title: 'Order History',
+                  onTap: onOrderHistoryTap,
+                ),
+                _buildDrawerItem(
+                  icon: Icons.store_outlined,
+                  title: 'Restaurant Profile',
+                  onTap: onRestaurantProfileTap,
                 ),
                 _buildDrawerItem(
                   icon: Icons.settings_outlined,
